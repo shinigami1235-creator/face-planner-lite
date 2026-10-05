@@ -3,7 +3,7 @@
    offline. Bump CACHE_VERSION on every deploy.
    The face finder and background models load from the cache first and are kept
    across versions, which lets them run offline after one online use. */
-const CACHE_VERSION = 'fpl-v1';
+const CACHE_VERSION = 'fpl-v2';
 const MODELS = 'fpl-models';
 const CORE = ['./', './index.html', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png',

@@ -44,7 +44,7 @@
   header .pt{display:flex; gap:6px; align-items:center}
   header .pt input[type=text]{width:170px}
 
-  #stage{position:relative; overflow:hidden; background:#000; touch-action:none}
+  #stage{position:relative; overflow:hidden; background:#000; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
   #cv{position:absolute; inset:0; width:100%; height:100%; display:block}
   [hidden]{display:none !important}
   #empty{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -94,6 +94,8 @@
   #edit input, #edit select{flex:1}
   .totals{font-size:13px; margin-top:6px}
   .totals b{color:var(--ink)}
+  .gest{margin:4px 0; padding-left:18px}
+  .gest li{margin:2px 0}
   .disc{font-size:11.5px; color:var(--ink3); border-top:1px solid var(--line); margin-top:18px; padding-top:10px}
   #printArea{display:none}
 
@@ -141,7 +143,7 @@
     </div>
     <div id="toolbar" hidden>
       <button id="mMark" class="on" title="Tap the face to place a point">Mark</button>
-      <button id="mMove" title="Drag points and guide handles, or drag the background to pan">Move</button>
+      <button id="mMove" title="Drag points and guide handles">Move</button>
       <button id="mRuler" title="Tap two points, then enter the real distance in mm">Ruler</button>
       <button id="bUndo" title="Undo (Ctrl+Z)" disabled>Undo</button>
       <span id="turnBox" class="turn" hidden title="Turn the face up to 45 degrees each way">Turn
@@ -167,8 +169,13 @@
       </select>
     </div>
     <p class="note" id="bgInfo"></p>
-    <p class="note">Use Turn in the toolbar to rotate the face up to 45° each way and place points at any angle. The sides of
-      the nose and the far cheek are estimated from one front photo, so check each point on the front view.</p>
+    <ol class="note gest">
+      <li>Drag one finger sideways to turn the face, up to 45° each way.</li>
+      <li>Drag two fingers to move the face.</li>
+      <li>Spread two fingers to zoom in and pinch them together to zoom out.</li>
+    </ol>
+    <p class="note">With a mouse, drag to turn, right-drag to move and scroll to zoom. The sides of the nose and the far cheek
+      are estimated from one front photo, so check each point on the front view.</p>
 
     <h2>Mark</h2>
     <div class="chips" id="procChips"></div>
@@ -1050,9 +1057,10 @@ function updateTurnUI(){
   const ok = !!S.mesh;
   $('#turnBox').hidden = !ok;
   if (!ok){ S.yaw = 0; $('#yaw').value = 0; }
-  $('#yawOut').textContent = S.yaw ? (S.yaw < 0 ? `◂ ${-S.yaw}°` : `${S.yaw}° ▸`) : '0°';
+  const dg = Math.round(Math.abs(S.yaw));
+  $('#yawOut').textContent = dg ? (S.yaw < 0 ? `◂ ${dg}°` : `${dg}° ▸`) : '0°';
 }
-$('#yaw').oninput = () => { S.yaw = +$('#yaw').value; updateTurnUI(); redraw(true); };
+$('#yaw').oninput = () => setYaw(+$('#yaw').value);
 $('#yaw0').onclick = () => { S.yaw = 0; $('#yaw').value = 0; updateTurnUI(); redraw(true); };
 
 
@@ -1076,51 +1084,72 @@ function hitKey(cx, cy){
   }
   return best;
 }
+/* Touch: one finger turns the face, two fingers move it and pinching zooms.
+   A tap still places or selects a point. Mouse: drag turns, right-drag or
+   Shift-drag moves, the wheel zooms. Without the turning view a one-finger
+   drag moves the photo. */
+const TURN_SNAP = 1.5;              // degrees from front that snap back to front
+function setYaw(v){
+  v = clamp(v, -45, 45); if (Math.abs(v) < TURN_SNAP) v = 0;
+  S.yaw = v; $('#yaw').value = Math.round(v); updateTurnUI(); redraw(true);
+}
+function oneFinger(e, cx, cy){
+  if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2 || e.shiftKey))
+    return { kind:'pan', x0:cx, y0:cy, ox:S.view.ox, oy:S.view.oy };
+  const m = hitMark(cx, cy);
+  if (S.mode === 'move'){
+    const k = m ? null : hitKey(cx, cy);
+    if (m){ pushUndo(); select(m.id); return { kind:'mark', m }; }
+    if (k){ pushUndo(); return { kind:'key', id:k }; }
+    return { kind:'bg', x0:cx, y0:cy, moved:false };
+  }
+  if (S.mode === 'ruler') return { kind:'ruler', x0:cx, y0:cy, moved:false };
+  return m ? { kind:'tapmark', m, x0:cx, y0:cy, moved:false } : { kind:'tap', x0:cx, y0:cy, moved:false };
+}
+const twoOf = () => { const v = [...ptrs.values()]; return [v[0], v[1]]; };
+cv.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('gesturestart', e => e.preventDefault());   // stops Safari zooming the page
 cv.addEventListener('pointerdown', e => {
   if (!S.img) return;
-  cv.setPointerCapture(e.pointerId);
+  try { cv.setPointerCapture(e.pointerId); } catch {}
   const r = cv.getBoundingClientRect(), cx = e.clientX-r.left, cy = e.clientY-r.top;
   ptrs.set(e.pointerId, [cx, cy]);
   if (ptrs.size === 2){
-    const [a, b] = [...ptrs.values()];
-    pinch = { d:Math.hypot(a[0]-b[0], a[1]-b[1]), c:mid(a,b), s:S.view.s, ox:S.view.ox, oy:S.view.oy };
+    // a second finger ends the one-finger gesture where it is and starts move and zoom
+    const [a, b] = twoOf();
+    pinch = { d0:Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, c0:mid(a,b), s0:S.view.s, ox0:S.view.ox, oy0:S.view.oy };
     drag = null; return;
   }
-  const m = hitMark(cx, cy);
-  if (S.mode === 'mark'){
-    drag = m ? { kind:'tapmark', m, x0:cx, y0:cy, moved:false } : { kind:'tap', x0:cx, y0:cy, moved:false };
-  } else if (S.mode === 'move'){
-    const k = m ? null : hitKey(cx, cy);
-    if (m){ pushUndo(); drag = { kind:'mark', m }; select(m.id); }
-    else if (k){ pushUndo(); drag = { kind:'key', id:k }; }
-    else drag = { kind:'pan', x0:cx, y0:cy, ox:S.view.ox, oy:S.view.oy };
-  } else if (S.mode === 'ruler'){
-    drag = { kind:'ruler', x0:cx, y0:cy, moved:false };
-  }
+  if (ptrs.size > 2) return;
+  drag = oneFinger(e, cx, cy);
 });
 cv.addEventListener('pointermove', e => {
   if (!ptrs.has(e.pointerId)) return;
   const r = cv.getBoundingClientRect(), cx = e.clientX-r.left, cy = e.clientY-r.top;
   ptrs.set(e.pointerId, [cx, cy]);
-  if (pinch && ptrs.size === 2){
-    const [a, b] = [...ptrs.values()];
-    const d = Math.hypot(a[0]-b[0], a[1]-b[1]), c = mid(a,b);
-    const k = d / (pinch.d || 1);
-    const s = Math.min(40, Math.max(0.02, pinch.s*k));
-    const p = [(pinch.c[0]-pinch.ox)/pinch.s, (pinch.c[1]-pinch.oy)/pinch.s];
-    S.view = { s, ox:c[0]-p[0]*s, oy:c[1]-p[1]*s };
+  if (pinch){
+    if (ptrs.size < 2) return;
+    const [a, b] = twoOf();
+    const c = mid(a, b), l = Math.log(Math.hypot(a[0]-b[0], a[1]-b[1]) / pinch.d0);
+    // the first 5% of spread is ignored, which lets two fingers move the face without zooming it
+    const lz = Math.sign(l)*Math.max(0, Math.abs(l) - 0.05);
+    const s = clamp(pinch.s0*Math.exp(lz), 0.02, 40);
+    const q = [(pinch.c0[0]-pinch.ox0)/pinch.s0, (pinch.c0[1]-pinch.oy0)/pinch.s0];
+    S.view = { s, ox:c[0]-q[0]*s, oy:c[1]-q[1]*s };
     redraw(true); return;
   }
   if (!drag) return;
-  if (drag.x0 !== undefined && Math.hypot(cx-drag.x0, cy-drag.y0) > 6) drag.moved = true;
-  if (drag.kind === 'mark'){ const p = screenToImg(cx, cy); if (p){ drag.m.x = p[0]; drag.m.y = p[1]; renderMarks(); redraw(); } }
-  else if (drag.kind === 'key'){ const p = screenToImg(cx, cy); if (p){ S.K[drag.id] = p; if (drag.id.startsWith('iris')) computeIris(); refreshAll(); } }
-  else if (drag.kind === 'pan'){ S.view.ox = drag.ox + cx - drag.x0; S.view.oy = drag.oy + cy - drag.y0; redraw(true); }
-  else if ((drag.kind === 'tap' || drag.kind === 'tapmark') && drag.moved && S.mode === 'mark'){
-    // a drag in Mark mode pans the photo
-    if (!drag.pan) drag.pan = { ox:S.view.ox, oy:S.view.oy };
-    S.view.ox = drag.pan.ox + cx - drag.x0; S.view.oy = drag.pan.oy + cy - drag.y0; redraw(true);
+  if (drag.kind === 'mark'){ const p = screenToImg(cx, cy); if (p){ drag.m.x = p[0]; drag.m.y = p[1]; renderMarks(); redraw(); } return; }
+  if (drag.kind === 'key'){ const p = screenToImg(cx, cy); if (p){ S.K[drag.id] = p; if (drag.id.startsWith('iris')) computeIris(); refreshAll(); } return; }
+  if (drag.kind === 'pan'){ S.view.ox = drag.ox + cx - drag.x0; S.view.oy = drag.oy + cy - drag.y0; redraw(true); return; }
+  // tap, tapmark, ruler or background: past 6 px the finger turns the face
+  if (!drag.moved && Math.hypot(cx-drag.x0, cy-drag.y0) > 6){
+    drag.moved = true;
+    drag.free = S.mesh ? { turn:true, yaw0:S.yaw, k:90/Math.max(320, r.width*0.9) } : { turn:false, ox:S.view.ox, oy:S.view.oy };
   }
+  if (!drag.moved) return;
+  if (drag.free.turn) setYaw(drag.free.yaw0 + (cx - drag.x0)*drag.free.k);
+  else { S.view.ox = drag.free.ox + cx - drag.x0; S.view.oy = drag.free.oy + cy - drag.y0; redraw(true); }
 });
 function endPtr(e){
   if (!ptrs.has(e.pointerId)) return;
@@ -1166,7 +1195,7 @@ function setMode(m){
   S.mode = m;
   for (const [id, mm] of [['#mMark','mark'],['#mMove','move'],['#mRuler','ruler']]) $(id).classList.toggle('on', m===mm);
   if (m === 'ruler'){ S.ruler = []; status('Tap both ends of a distance you know.'); }
-  else if (m === 'move') status('Drag a point or an orange handle to move it. Drag the background to pan.');
+  else if (m === 'move') status('Drag a point or an orange handle to move it.');
   else status('');
   redraw();
 }
