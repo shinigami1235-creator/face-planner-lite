@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Face Planner Lite</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#151a21">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Face Planner">
+<link rel="icon" type="image/png" href="icons/favicon-48.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   :root{
     --bg:#0e1116; --panel:#151a21; --panel2:#1b2129; --line:#2a323d; --line2:#38424f;
@@ -107,7 +115,7 @@
 <body>
 <div id="app">
   <header>
-    <h1>Face Planner Lite<small>front photo · marks · danger zones · thirds and fifths</small></h1>
+    <h1>Face Planner Lite<small>Injection planning on a front photo</small></h1>
     <button id="bOpen" class="primary">Open photo</button>
     <input id="fPhoto" type="file" accept="image/*" hidden>
     <div class="pt">
@@ -125,15 +133,15 @@
   <div id="stage">
     <canvas id="cv"></canvas>
     <div id="empty">
-      <div class="big">Open a front-facing photograph</div>
-      <p>The face is found automatically and the guides are laid over it. Then tap the face to place injection points.
-         Everything runs in this page; the photograph is not uploaded anywhere.</p>
-      <p class="note">Best results: face straight on, level, neutral expression, hair off the forehead, eyes open.</p>
+      <div class="big">Open a front photo</div>
+      <p>The guides are drawn over the face when the photo opens. Tap the face to place injection points.</p>
+      <p class="note">Shoot the face straight on with a neutral expression, eyes open and the hair off the forehead.</p>
+      <p class="note">No photo uploaded.</p>
       <button id="bOpen2" class="primary">Open photo</button>
     </div>
     <div id="toolbar" hidden>
       <button id="mMark" class="on" title="Tap the face to place a point">Mark</button>
-      <button id="mMove" title="Drag points and guide handles; drag the background to pan">Move</button>
+      <button id="mMove" title="Drag points and guide handles, or drag the background to pan">Move</button>
       <button id="mRuler" title="Tap two points, then enter the real distance in mm">Ruler</button>
       <button id="bUndo" title="Undo (Ctrl+Z)" disabled>Undo</button>
       <span id="turnBox" class="turn" hidden title="Turn the face up to 45 degrees each way">Turn
@@ -159,8 +167,8 @@
       </select>
     </div>
     <p class="note" id="bgInfo"></p>
-    <p class="note">Turn, in the toolbar, shows the face up to 45° each way. The depth comes from the face landmarks on this
-      one photo, so the sides of the nose and the far cheek are estimated. Points can be placed in either view.</p>
+    <p class="note">Use Turn in the toolbar to rotate the face up to 45° each way and place points at any angle. The sides of
+      the nose and the far cheek are estimated from one front photo, so check each point on the front view.</p>
 
     <h2>Mark</h2>
     <div class="chips" id="procChips"></div>
@@ -172,10 +180,10 @@
       <select id="tplSel" style="flex:1"><option value="">Add a standard pattern…</option></select>
       <button id="tplAdd">Add</button>
     </div>
-    <p class="note">Patterns are placed from the key points and the scale, as a starting point to adjust.</p>
+    <p class="note">Patterns are placed from the key points and the scale. Switch to Move to adjust each point.</p>
 
     <h2>Plan</h2>
-    <div id="marks"><p class="note">No points yet.</p></div>
+    <div id="marks"><p class="note">Choose a product, then tap the face to place a point.</p></div>
     <div id="edit" hidden>
       <div class="row"><label>Product</label><select id="eProc"></select></div>
       <div class="row"><label>Dose</label><input id="eDose" type="text"></div>
@@ -193,8 +201,8 @@
     <label class="ck"><input type="checkbox" id="gNums" checked> Point numbers and doses</label>
     <label class="ck"><input type="checkbox" id="gKeys"> Key points</label>
     <div id="dzList" style="margin-top:6px"></div>
-    <p class="note">Danger zones are drawn from this face's key points as an approximate reference. They do not replace
-      palpation, anatomy, aspiration or ultrasound.</p>
+    <p class="note">Danger zones are approximate and drawn from this face's key points. Confirm with palpation, aspiration
+      or ultrasound.</p>
 
     <h2>Proportions</h2>
     <div id="props"><p class="note">Open a photo first.</p></div>
@@ -204,19 +212,20 @@
     <div class="row" style="margin-top:6px">
       <select id="scaleSrc" style="flex:1">
         <option value="iris">From the iris (11.7 mm)</option>
-        <option value="canthi">Assume 90 mm between outer eye corners</option>
+        <option value="canthi">90 mm between the outer eye corners</option>
         <option value="ruler">From the ruler</option>
       </select>
     </div>
-    <p class="note">For a sticker of known size on the forehead, choose Ruler in the toolbar, tap both ends, and enter the distance.</p>
+    <p class="note">To use a sticker of known size on the forehead, choose Ruler in the toolbar, tap both ends of the sticker
+      and enter its length in mm.</p>
 
     <h2>Key points</h2>
-    <p class="note">If a guide sits in the wrong place, turn on Key points, choose Move, and drag the handle onto the
-      anatomy. The hairline handle is an estimate; drag it to the real hairline for the upper third.</p>
+    <p class="note">If a guide is in the wrong place, turn on Key points, choose Move and drag its handle onto the face.
+      Drag the hairline handle onto the hairline before reading the upper third.</p>
     <div class="row"><button id="bRedetect" disabled>Detect again</button><button id="bManual" disabled>Place by hand</button></div>
 
-    <div class="disc">For planning and patient discussion. Doses and positions are the clinician's decision.
-      Patient photographs are personal data: keep saved plans and images on the clinic system.</div>
+    <div class="disc">For planning and patient discussion. Doses and positions are the clinician's decision. Keep saved plans
+      and images on the clinic system since they contain patient photos.</div>
   </aside>
 </div>
 <div id="printArea"><img id="printImg" alt=""></div>
@@ -382,7 +391,7 @@ function mmPerPx(){
 function scaleName(){
   if (S.scaleSrc === 'ruler' && S.rulerMmPerPx) return 'ruler';
   if (S.scaleSrc === 'iris' && S.iris) return 'iris';
-  return '90 mm outer canthi';
+  return '90 mm between the outer eye corners';
 }
 
 /* ═══════════ danger zones ═══════════
@@ -445,7 +454,7 @@ function fifths(){
 /* ═══════════ drawing ═══════════
    One routine for the screen and for the downloaded image. T maps photo
    pixels to canvas pixels; px is the size of one interface pixel in canvas
-   pixels, so lines and labels read the same at any zoom or output size. */
+   pixels, which keeps lines and labels one size at any zoom or output size. */
 function drawScene(g, T, px, opts){
   opts = opts || {};
   const P = p => [p[0]*T.s + T.ox, p[1]*T.s + T.oy];
@@ -466,7 +475,7 @@ function drawScene(g, T, px, opts){
     g.textAlign = align || 'left'; g.textBaseline = 'middle';
     const w = g.measureText(text).width, h = (size||11.5)*px*1.35;
     let x0 = align==='right' ? A[0]-w : align==='center' ? A[0]-w/2 : A[0];
-    // keep every label on the photograph and on the screen, so none is cut at an edge
+    // keep every label inside the photograph and the screen
     const lo = Math.max(T.ox, 0) + 6*px, hi = Math.min(T.ox + S.W*T.s, g.canvas.width) - 6*px;
     const top = Math.max(T.oy, 0) + h/2 + 2*px, bot = Math.min(T.oy + S.H*T.s, g.canvas.height) - h/2 - 2*px;
     if (hi - lo > w){ x0 = Math.min(Math.max(x0, lo), hi - w); }
@@ -510,7 +519,7 @@ function drawScene(g, T, px, opts){
     const names = ['Hairline','Glabella','Subnasale','Menton'];
     th.ys.forEach((y,i) => {
       line(F.fromF(xL,y), F.fromF(xR,y), i===0 ? 'rgba(240,200,110,0.9)' : 'rgba(240,200,110,0.95)', 1.5, i===0 ? [3,4] : null);
-      label(F.fromF(xL - 0.02*F.u, y), names[i] + (i===0 ? ' (estimate, drag)' : ''), '#f0c86e', 'right', 10.5);
+      label(F.fromF(xL - 0.02*F.u, y), names[i] + (i===0 && !S.hairFromSeg ? ' (estimated)' : ''), '#f0c86e', 'right', 10.5);
     });
     for (let i=0;i<3;i++){
       const yc = (th.ys[i]+th.ys[i+1])/2;
@@ -584,7 +593,7 @@ function fit(){
   redraw(true);
 }
 let raf = 0;
-/* viewOnly: only the zoom, pan or turn changed, so the turned view keeps its overlay. */
+/* viewOnly is true when only the zoom, pan or turn changed. The turned view then reuses its overlay. */
 function redraw(viewOnly){
   if (!viewOnly) S.texDirty = true;
   if (raf) return;
@@ -618,16 +627,16 @@ const TRIS = [0,11,37,0,11,267,0,37,164,0,164,267,1,4,44,1,4,274,1,19,44,1,19,27
 const OVAL = [10,109,67,103,54,21,162,127,234,93,132,58,172,136,150,149,176,148,152,377,400,378,379,365,397,288,361,323,454,356,389,251,284,332,297,338];
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const smooth = (a, b, v) => { const t = clamp((v-a)/(b-a), 0, 1); return t*t*(3-2*t); };
-/* Canvases on phones are limited to about 16 million pixels, so the cut photo
-   is made smaller when the photograph is larger than that. */
+/* Phone browsers limit a canvas to about 16 million pixels. A larger photo is
+   cut out at a smaller size. */
 const AREA_MAX = 16e6;
 
 /* ═══════════ background removal ═══════════
    The segmentation model sorts each pixel into background, hair, body skin,
    face skin, clothes or other. "Face only" keeps face skin; "Face, hair and
-   neck" adds hair and body skin. The face outline from the landmarks is added
-   to both, so the eyes, brows, lips and beard are never cut out. Without the
-   model the outline alone is used, raised to the hairline. */
+   neck" adds hair and body skin. Both also take in the face outline from the
+   landmarks, which keeps the eyes, brows, lips and beard. Without the model the
+   outline alone is used, raised to the hairline. */
 const TV = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18';
 const SEG_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite';
 let visionP = null, filesP = null, segmenter = null;
@@ -781,9 +790,9 @@ function refreshBackground(){ makeMasks(); buildCut(); renderBg(); }
 function renderBg(){
   const el = $('#bgInfo'); if (!el) return;
   if (!S.img) { el.textContent = ''; return; }
-  el.textContent = S.bg === 'off' ? 'Showing the original photo.'
-    : S.segConf ? 'Background removed by the segmentation model.' + (S.hairFromSeg ? ' The hairline was found from it too.' : '')
-    : 'The segmentation model could not load (it needs internet the first time), so the face outline from the key points is used.';
+  el.textContent = S.bg === 'off' ? ''
+    : S.segConf ? (S.hairFromSeg ? 'Background removed and hairline placed at the top of the forehead skin.' : 'Background removed.')
+    : 'The background model needs internet the first time it runs. The face outline from the key points is used until then.';
 }
 $('#bgSel').onchange = () => { S.bg = $('#bgSel').value; buildCut(); renderBg(); S.texDirty = true; redraw(); };
 
@@ -792,7 +801,7 @@ $('#bgSel').onchange = () => { S.bg = $('#bgSel').value; buildCut(); renderBg();
    face, a rounded head shape carries it out to the hair and the sides, and the
    photograph with its guides and points is laid over it. Turning rotates it
    about the face's vertical axis. The far side of the nose and the sides of
-   the face are not in a front photo, so they are stretched from what is. */
+   the face are stretched from the front photo. */
 const FIT_IDS = [10,151,9,108,337,67,297,69,299,50,280,117,346,123,352,187,411,205,425,101,330];
 function buildMesh(){
   S.mesh = null; S.meshVer = (S.meshVer||0) + 1;
@@ -805,7 +814,7 @@ function buildMesh(){
   const fR = toF(...P2(234)), fL = toF(...P2(454));
   const ac = (fR[0]+fL[0])/2, A = (fL[0]-fR[0])/2*1.08, Bu = 1.55*A, Bd = 1.9*A;
   const zc = (Z(234)+Z(454))/2 - 0.3*A;
-  // an ellipsoid, with its rim eased down to the back so the sides do not tear when turned
+  // an ellipsoid with its rim eased down to the back plane
   const shape = (a, b) => {
     const B = b < 0 ? Bu : Bd, r2 = ((a-ac)/A)**2 + (b/B)**2;
     if (r2 >= 1.44) return 0;
@@ -1014,7 +1023,7 @@ let texTimer = 0;
 function draw3D(){
   if (!GL.screen){ GL.screen = makeGL(document.createElement('canvas')) || false; }
   const R = GL.screen;
-  if (!R){ S.yaw = 0; $('#yaw').value = 0; $('#turnBox').hidden = true; status('This browser cannot show the turning view.'); return false; }
+  if (!R){ S.yaw = 0; $('#yaw').value = 0; $('#turnBox').hidden = true; status('Turn is not available in this browser.'); return false; }
   const d = window.devicePixelRatio || 1;
   R.setMesh(S.mesh);
   if (S.texDirty || !S.texS){ buildTexture(R, 1/S.view.s); S.texS = S.view.s; S.texDirty = false; }
@@ -1108,7 +1117,7 @@ cv.addEventListener('pointermove', e => {
   else if (drag.kind === 'key'){ const p = screenToImg(cx, cy); if (p){ S.K[drag.id] = p; if (drag.id.startsWith('iris')) computeIris(); refreshAll(); } }
   else if (drag.kind === 'pan'){ S.view.ox = drag.ox + cx - drag.x0; S.view.oy = drag.oy + cy - drag.y0; redraw(true); }
   else if ((drag.kind === 'tap' || drag.kind === 'tapmark') && drag.moved && S.mode === 'mark'){
-    // a drag in Mark mode pans, so a finger on a tablet can move the photo
+    // a drag in Mark mode pans the photo
     if (!drag.pan) drag.pan = { ox:S.view.ox, oy:S.view.oy };
     S.view.ox = drag.pan.ox + cx - drag.x0; S.view.oy = drag.pan.oy + cy - drag.y0; redraw(true);
   }
@@ -1127,7 +1136,7 @@ function endPtr(e){
     const m = { id:'m'+(S.seq++), x:p[0], y:p[1], proc:S.proc, dose:$('#doseNew').value.trim(), label:'' };
     S.marks.push(m); select(m.id);
     const z = zoneHits(p);
-    if (z.length) status(`Point ${S.marks.length} is inside a danger zone: ${z.map(q=>q.name).join(', ')}.`);
+    if (z.length) status(`Point ${S.marks.length} is in a danger zone: ${z.map(q=>q.name).join(', ')}.`);
   } else if (d.kind === 'tapmark' && !d.moved){
     select(d.m.id);
   } else if (d.kind === 'ruler' && !d.moved){
@@ -1156,8 +1165,8 @@ cv.addEventListener('pointercancel', endPtr);
 function setMode(m){
   S.mode = m;
   for (const [id, mm] of [['#mMark','mark'],['#mMove','move'],['#mRuler','ruler']]) $(id).classList.toggle('on', m===mm);
-  if (m === 'ruler'){ S.ruler = []; status('Ruler: tap one end, then the other.'); }
-  else if (m === 'move') status('Move: drag a point or an orange key-point handle. Drag the background to pan.');
+  if (m === 'ruler'){ S.ruler = []; status('Tap both ends of a distance you know.'); }
+  else if (m === 'move') status('Drag a point or an orange handle to move it. Drag the background to pan.');
   else status('');
   redraw();
 }
@@ -1237,7 +1246,7 @@ function delSel(){
 }
 function renderMarks(){
   const box = $('#marks');
-  if (!S.marks.length){ box.innerHTML = '<p class="note">No points yet. Choose a product, then tap the face.</p>'; }
+  if (!S.marks.length){ box.innerHTML = '<p class="note">Choose a product, then tap the face to place a point.</p>'; }
   else {
     box.innerHTML = '';
     S.marks.forEach((m, i) => {
@@ -1316,7 +1325,7 @@ function renderProps(){
       ${['Upper (hairline to glabella)','Middle (glabella to subnasale)','Lower (subnasale to menton)'].map((n,i)=>
         `<tr><td>${n}</td><td class="num">${(th.seg[i]*mm).toFixed(0)}</td><td class="num">${Math.round(100*th.seg[i]/tot)}%</td></tr>`).join('')}
     </table>
-    <p class="note">Ideal is a third each. The upper third depends on the hairline handle.</p>
+    <p class="note">Ideal is a third each. The upper third is measured from the hairline handle.</p>
     <table style="margin-top:6px">
       <tr><th>Fifths, patient's right to left</th><th class="num">mm</th><th class="num">× eye</th></tr>
       ${['Lateral, right','Eye, right','Between the eyes','Eye, left','Lateral, left'].map((n,i)=>
@@ -1328,14 +1337,14 @@ function renderProps(){
       <tr><td>Alar width ÷ between the eyes</td><td class="num">${(alar*mm).toFixed(0)}</td><td class="num">${r(alar, ic)}</td></tr>
       <tr><td>Mouth width ÷ alar width</td><td class="num">${(mouth*mm).toFixed(0)}</td><td class="num">${r(mouth, alar)}</td></tr>
     </table>
-    <p class="note">Classic references: alar width close to the distance between the eyes (1.0), mouth about 1.5 alar widths.</p>`;
+    <p class="note">Reference: alar width equal to the distance between the eyes, and mouth width 1.5 alar widths.</p>`;
 }
 function renderScale(){
   if (!S.K){ $('#scaleInfo').textContent = 'Open a photo first.'; return; }
   const mm = mmPerPx(), F = frame();
-  $('#scaleInfo').innerHTML = `Using <b>${scaleName()}</b>: outer eye corners ${(F.u*mm).toFixed(0)} mm apart.` +
-    (S.scaleSrc==='iris' && !S.iris ? ' Iris not found on this photo, so 90 mm is assumed.' : '') +
-    (S.scaleSrc==='ruler' && !S.rulerMmPerPx ? ' No ruler yet, so 90 mm is assumed.' : '');
+  $('#scaleInfo').innerHTML = `Scale: <b>${scaleName()}</b>. The outer eye corners measure ${(F.u*mm).toFixed(0)} mm apart.` +
+    (S.scaleSrc==='iris' && !S.iris ? ' The iris was not found. The scale uses 90 mm between the outer eye corners.' : '') +
+    (S.scaleSrc==='ruler' && !S.rulerMmPerPx ? ' No ruler set. The scale uses 90 mm between the outer eye corners.' : '');
 }
 $('#scaleSrc').onchange = () => { S.scaleSrc = $('#scaleSrc').value; if (S.scaleSrc==='ruler' && !S.rulerMmPerPx) setMode('ruler'); refreshAll(); };
 
@@ -1373,7 +1382,7 @@ async function detect(){
     const lmk = await getLandmarker();
     const res = lmk.detect(S.img);
     const L = res.faceLandmarks && res.faceLandmarks[0];
-    if (!L){ placeTemplate(); status('No face found, so a standard face has been placed. Drag each orange handle onto its anatomy.'); return; }
+    if (!L){ placeTemplate(); status('No face found. Drag each orange handle onto its point on the face.'); return; }
     const P = i => [L[i].x*S.W, L[i].y*S.H];
     const K = {};
     for (const k of KEYS) K[k.id] = P(k.mp);
@@ -1389,19 +1398,18 @@ async function detect(){
   } catch (e){
     console.error(e);
     placeTemplate();
-    status('The face finder could not load (it needs internet the first time). A standard face has been placed: drag each orange handle onto its anatomy.');
+    status('The face finder needs internet the first time it runs. Drag each orange handle onto its point on the face, or connect and press Detect again.');
     return;
   }
   afterKeys();
-  status('Face found. Removing the background…');
+  status('Removing the background…');
   await segment();
   try { refreshBackground(); buildMesh(); } catch (e){ console.warn(e); S.mesh = null; }
   updateTurnUI(); refreshAll(); fit();     // the toolbar may have grown a line
-  status('Face found. Choose a product and tap the face to place points.');
+  status('Choose a product and tap the face to place points.');
 }
-/* There is no landmark on the hairline. The upper forehead landmark (10)
-   sits well below it, so start a little above it and let the clinician drag
-   it to the real hairline. */
+/* The face mesh has no hairline landmark. Start a little above the upper
+   forehead landmark (10) and let the clinician drag it onto the hairline. */
 function estimateHairline(L){
   const F = frame(); const f10 = F.toF([L[10].x*S.W, L[10].y*S.H]), fg = F.toF(S.K.glabella);
   return F.fromF(f10[0], fg[1] - (fg[1]-f10[1])*1.35);
@@ -1421,7 +1429,7 @@ function afterKeys(){
   refreshAll(); fit();
 }
 $('#bRedetect').onclick = () => { if (S.img){ pushUndo(); detect(); } };
-$('#bManual').onclick = () => { if (S.img){ pushUndo(); placeTemplate(); status('Drag each orange handle onto its anatomy. Turn Key points on to see them while marking.'); } };
+$('#bManual').onclick = () => { if (S.img){ pushUndo(); placeTemplate(); status('Drag each orange handle onto its point on the face. Turn on Key points to keep the handles visible while marking.'); } };
 
 /* ═══════════ files ═══════════ */
 $('#bOpen').onclick = $('#bOpen2').onclick = () => $('#fPhoto').click();
@@ -1468,8 +1476,8 @@ function download(url, name){
   const a = document.createElement('a'); a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
 }
-/* The downloaded image: the marked photograph on the left, the plan beside
-   it, so it can go straight into the notes or be shown to the patient. */
+/* The downloaded image puts the marked photo on the left and the plan on the
+   right, for the notes or for showing the patient. */
 function composite(){
   const maxH = 2200;
   const k = Math.min(1, maxH / S.H);
@@ -1537,9 +1545,9 @@ function composite(){
       text(names.join(', ') || 'none shown', 11, 400, '#6f7683', 4);
     }
   }
-  if (turned) text(`View turned ${Math.abs(S.yaw)}° to the ${S.yaw > 0 ? 'right' : 'left'} of the picture. Depth estimated from one front photo.`, 11, 400, '#454b57', 4);
+  if (turned) text(`Turned ${Math.abs(S.yaw)}° to the ${S.yaw > 0 ? 'right' : 'left'}. The depth is estimated from one front photo.`, 11, 400, '#454b57', 4);
   y = Math.max(y, ih - 60*px);
-  text('Approximate reference for planning and discussion. Not a substitute for anatomy, palpation or imaging.', 10.5, 400, '#6f7683', 0);
+  text('Danger zones are approximate. Confirm with palpation, aspiration or ultrasound.', 10.5, 400, '#6f7683', 0);
   text(`Scale: ${scaleName()}. Face Planner Lite.`, 10.5, 400, '#6f7683', 0);
   return c;
 }
@@ -1555,7 +1563,7 @@ $('#bPrint').onclick = () => {
 };
 $('#bSave').onclick = () => {
   if (!S.img) return;
-  // the photograph goes in the plan, reduced to 1800 px on the long side, so the plan opens anywhere
+  // the plan carries the photo at up to 1800 px on the long side
   const k = Math.min(1, 1800/Math.max(S.W, S.H));
   const c = document.createElement('canvas'); c.width = Math.round(S.W*k); c.height = Math.round(S.H*k);
   c.getContext('2d').drawImage(S.img, 0, 0, c.width, c.height);
@@ -1569,8 +1577,8 @@ $('#bSave').onclick = () => {
   const u = URL.createObjectURL(new Blob([JSON.stringify(plan)], { type:'application/json' }));
   download(u, `plan_${stamp()}.json`); setTimeout(()=>URL.revokeObjectURL(u), 4000);
 };
-/* The model's masks go in the plan as two small PNGs, so a reopened plan has
-   its background removed without the internet. */
+/* The plan carries the model's masks as two small PNGs and reopens with the
+   background removed when offline. */
 function segToPlan(k){
   const sc = S.segConf; if (!sc) return null;
   const png = arr => {
@@ -1600,10 +1608,10 @@ function openPlanFile(f){
   r.onload = () => {
     try {
       const p = JSON.parse(r.result);
-      if (p.app !== 'face-planner-lite' || !p.image) throw new Error('not a Face Planner Lite plan');
+      if (p.app !== 'face-planner-lite' || !p.image) throw new Error('it is not a Face Planner Lite plan');
       $('#pName').value = p.patient || ''; if (p.date) $('#pDate').value = p.date;
       loadImage(p.image, p.imageName, p);
-    } catch (e){ alert('Could not open that plan: ' + e.message); }
+    } catch (e){ alert('This plan could not be opened: ' + e.message); }
   };
   r.readAsText(f);
 }
@@ -1611,6 +1619,11 @@ function openPlanFile(f){
 renderProcs(); $('#doseNew').value = PROC[S.proc].dose; renderTemplates(); renderMarks();
 window.FPL = { S, dangerZones, thirds, fifths, mmPerPx, composite, frame, toScreen, screenToImg, zAt, turn, is3D, refreshBackground };
 renderBg();
+</script>
+<script>
+  // installs as an app and keeps working offline when served from the web; opened as a file, this is skipped
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
+    addEventListener('load', () => navigator.serviceWorker.register('service-worker.js').catch(e => console.warn('Service worker:', e)));
 </script>
 </body>
 </html>
