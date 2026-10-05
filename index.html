@@ -1,0 +1,1616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Face Planner Lite</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#151a21; --panel2:#1b2129; --line:#2a323d; --line2:#38424f;
+    --ink:#e8edf3; --ink2:#b4beca; --ink3:#7f8a98;
+    --accent:#3ea8a0; --accent2:#2c7f79;
+    --sev1:#d9a13e; --sev2:#d96f3e; --sev3:#d94a4a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  button, select, input{font:inherit; color:inherit}
+  button{background:var(--panel2); border:1px solid var(--line2); border-radius:6px; padding:6px 10px; cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.45; cursor:default}
+  button.on{background:var(--accent2); border-color:var(--accent); color:#fff}
+  button.primary{background:var(--accent2); border-color:var(--accent); color:#fff}
+  button.warn{color:#f0a0a0; border-color:#5a3434}
+  input[type=text], input[type=number], input[type=date], select{
+    background:var(--bg); border:1px solid var(--line2); border-radius:6px; padding:5px 8px; min-width:0}
+  label.ck{display:flex; align-items:center; gap:8px; padding:3px 0; cursor:pointer}
+  label.ck input{accent-color:var(--accent); width:16px; height:16px}
+
+  #app{display:grid; grid-template-columns:1fr 340px; grid-template-rows:auto 1fr; height:100vh; height:100dvh}
+  header{grid-column:1/3; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px;
+    border-bottom:1px solid var(--line); background:var(--panel)}
+  header h1{font-size:15px; margin:0 8px 0 0; letter-spacing:.01em}
+  header h1 small{display:block; font-size:11px; color:var(--ink3); font-weight:400}
+  header .grow{flex:1}
+  header .pt{display:flex; gap:6px; align-items:center}
+  header .pt input[type=text]{width:170px}
+
+  #stage{position:relative; overflow:hidden; background:#000; touch-action:none}
+  #cv{position:absolute; inset:0; width:100%; height:100%; display:block}
+  [hidden]{display:none !important}
+  #empty{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; text-align:center; padding:24px; color:var(--ink2)}
+  #empty .big{font-size:18px; color:var(--ink)}
+  #empty p{max-width:460px; margin:0}
+  #toolbar{position:absolute; left:10px; top:10px; display:flex; gap:6px; flex-wrap:wrap}
+  #toolbar button{background:rgba(21,26,33,.92)}
+  .turn{display:flex; align-items:center; gap:6px; background:rgba(21,26,33,.92); border:1px solid var(--line2);
+    border-radius:6px; padding:2px 4px 2px 9px; font-size:13px}
+  .turn input[type=range]{width:140px; accent-color:var(--accent); margin:0}
+  .turn output{min-width:44px; text-align:center; font-variant-numeric:tabular-nums}
+  .turn button{padding:4px 8px}
+  #zoombar{position:absolute; right:10px; bottom:10px; display:flex; gap:6px}
+  #zoombar button{background:rgba(21,26,33,.92); min-width:36px}
+  #status{position:absolute; left:10px; bottom:10px; right:150px; font-size:12px; color:var(--ink2);
+    background:rgba(14,17,22,.8); padding:5px 9px; border-radius:6px; pointer-events:none}
+  #status:empty{display:none}
+
+  aside{border-left:1px solid var(--line); background:var(--panel); overflow-y:auto; padding:4px 14px 30px}
+  aside h2{font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--accent); margin:16px 0 8px}
+  .row{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+  .note{font-size:12px; color:var(--ink3); margin:4px 0}
+  .chips{display:flex; flex-wrap:wrap; gap:6px}
+  .chip{display:flex; align-items:center; gap:6px; padding:5px 9px; border-radius:999px; border:1px solid var(--line2);
+    background:var(--bg); cursor:pointer; font-size:13px}
+  .chip .dot{width:11px; height:11px; border-radius:50%; flex:none}
+  .chip.on{border-color:var(--ink2); background:var(--panel2)}
+  table{width:100%; border-collapse:collapse; font-size:12.5px}
+  td,th{padding:3px 4px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top}
+  th{color:var(--ink3); font-weight:600; font-size:11px}
+  td.num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .dz{display:flex; align-items:center; gap:8px; padding:2px 0; font-size:13px}
+  .dz .dot{width:11px; height:11px; border-radius:50%; flex:none}
+  .dz .sv{margin-left:auto; font-size:11px; color:var(--ink3)}
+  #marks .mk{display:grid; grid-template-columns:26px 1fr auto; gap:6px; align-items:center; padding:5px 4px;
+    border-bottom:1px solid var(--line); cursor:pointer}
+  #marks .mk.sel{background:var(--panel2)}
+  #marks .n{width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:#0b0d10}
+  #marks .t{font-size:12.5px}
+  #marks .t small{display:block; color:var(--ink3)}
+  #marks .w{color:var(--sev3); font-size:11px}
+  #edit{border:1px solid var(--line2); border-radius:8px; padding:8px; margin-top:8px; background:var(--bg)}
+  #edit .row{margin:4px 0}
+  #edit label{font-size:12px; color:var(--ink3); width:52px}
+  #edit input, #edit select{flex:1}
+  .totals{font-size:13px; margin-top:6px}
+  .totals b{color:var(--ink)}
+  .disc{font-size:11.5px; color:var(--ink3); border-top:1px solid var(--line); margin-top:18px; padding-top:10px}
+  #printArea{display:none}
+
+  @media (max-width:820px){
+    #app{grid-template-columns:1fr; grid-template-rows:auto 58vh auto; height:auto; min-height:100vh}
+    header{grid-column:1}
+    aside{border-left:none; border-top:1px solid var(--line); overflow:visible}
+    header .pt input[type=text]{width:120px}
+  }
+  @media print{
+    body *{visibility:hidden}
+    #printArea, #printArea *{visibility:visible}
+    #printArea{display:block; position:absolute; left:0; top:0; width:100%}
+    #printArea img{width:100%; height:auto}
+    @page{size:A4 landscape; margin:8mm}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Face Planner Lite<small>front photo · marks · danger zones · thirds and fifths</small></h1>
+    <button id="bOpen" class="primary">Open photo</button>
+    <input id="fPhoto" type="file" accept="image/*" hidden>
+    <div class="pt">
+      <input id="pName" type="text" placeholder="Patient">
+      <input id="pDate" type="date">
+    </div>
+    <span class="grow"></span>
+    <button id="bExport" disabled>Download image</button>
+    <button id="bPrint" disabled>Print</button>
+    <button id="bSave" disabled>Save plan</button>
+    <button id="bLoad">Open plan</button>
+    <input id="fPlan" type="file" accept=".json,application/json" hidden>
+  </header>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="empty">
+      <div class="big">Open a front-facing photograph</div>
+      <p>The face is found automatically and the guides are laid over it. Then tap the face to place injection points.
+         Everything runs in this page; the photograph is not uploaded anywhere.</p>
+      <p class="note">Best results: face straight on, level, neutral expression, hair off the forehead, eyes open.</p>
+      <button id="bOpen2" class="primary">Open photo</button>
+    </div>
+    <div id="toolbar" hidden>
+      <button id="mMark" class="on" title="Tap the face to place a point">Mark</button>
+      <button id="mMove" title="Drag points and guide handles; drag the background to pan">Move</button>
+      <button id="mRuler" title="Tap two points, then enter the real distance in mm">Ruler</button>
+      <button id="bUndo" title="Undo (Ctrl+Z)" disabled>Undo</button>
+      <span id="turnBox" class="turn" hidden title="Turn the face up to 45 degrees each way">Turn
+        <input id="yaw" type="range" min="-45" max="45" step="1" value="0"><output id="yawOut">0°</output>
+        <button id="yaw0">Front</button></span>
+    </div>
+    <div id="zoombar" hidden>
+      <button id="zOut" title="Zoom out">−</button>
+      <button id="zFit" title="Fit the photo">Fit</button>
+      <button id="zIn" title="Zoom in">+</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <aside>
+    <h2>View</h2>
+    <div class="row">
+      <span class="note" style="margin:0">Background</span>
+      <select id="bgSel" style="flex:1">
+        <option value="face">Face only, on black</option>
+        <option value="head">Face, hair and neck, on black</option>
+        <option value="off">Original photo</option>
+      </select>
+    </div>
+    <p class="note" id="bgInfo"></p>
+    <p class="note">Turn, in the toolbar, shows the face up to 45° each way. The depth comes from the face landmarks on this
+      one photo, so the sides of the nose and the far cheek are estimated. Points can be placed in either view.</p>
+
+    <h2>Mark</h2>
+    <div class="chips" id="procChips"></div>
+    <div class="row" style="margin-top:8px">
+      <span class="note" style="margin:0">Dose for new points</span>
+      <input id="doseNew" type="text" style="width:90px">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <select id="tplSel" style="flex:1"><option value="">Add a standard pattern…</option></select>
+      <button id="tplAdd">Add</button>
+    </div>
+    <p class="note">Patterns are placed from the key points and the scale, as a starting point to adjust.</p>
+
+    <h2>Plan</h2>
+    <div id="marks"><p class="note">No points yet.</p></div>
+    <div id="edit" hidden>
+      <div class="row"><label>Product</label><select id="eProc"></select></div>
+      <div class="row"><label>Dose</label><input id="eDose" type="text"></div>
+      <div class="row"><label>Note</label><input id="eLabel" type="text" placeholder="e.g. corrugator, deep bolus"></div>
+      <div class="row"><button id="eDel" class="warn">Delete point</button><span class="grow"></span><button id="eDone">Done</button></div>
+    </div>
+    <div class="totals" id="totals"></div>
+    <div class="row" style="margin-top:8px"><button id="bClear" class="warn" disabled>Clear all points</button></div>
+
+    <h2>Guides</h2>
+    <label class="ck"><input type="checkbox" id="gMid" checked> Midline</label>
+    <label class="ck"><input type="checkbox" id="gThirds" checked> Facial thirds</label>
+    <label class="ck"><input type="checkbox" id="gFifths" checked> Facial fifths</label>
+    <label class="ck"><input type="checkbox" id="gDanger" checked> Danger zones</label>
+    <label class="ck"><input type="checkbox" id="gNums" checked> Point numbers and doses</label>
+    <label class="ck"><input type="checkbox" id="gKeys"> Key points</label>
+    <div id="dzList" style="margin-top:6px"></div>
+    <p class="note">Danger zones are drawn from this face's key points as an approximate reference. They do not replace
+      palpation, anatomy, aspiration or ultrasound.</p>
+
+    <h2>Proportions</h2>
+    <div id="props"><p class="note">Open a photo first.</p></div>
+
+    <h2>Scale</h2>
+    <div id="scaleInfo" class="note">Open a photo first.</div>
+    <div class="row" style="margin-top:6px">
+      <select id="scaleSrc" style="flex:1">
+        <option value="iris">From the iris (11.7 mm)</option>
+        <option value="canthi">Assume 90 mm between outer eye corners</option>
+        <option value="ruler">From the ruler</option>
+      </select>
+    </div>
+    <p class="note">For a sticker of known size on the forehead, choose Ruler in the toolbar, tap both ends, and enter the distance.</p>
+
+    <h2>Key points</h2>
+    <p class="note">If a guide sits in the wrong place, turn on Key points, choose Move, and drag the handle onto the
+      anatomy. The hairline handle is an estimate; drag it to the real hairline for the upper third.</p>
+    <div class="row"><button id="bRedetect" disabled>Detect again</button><button id="bManual" disabled>Place by hand</button></div>
+
+    <div class="disc">For planning and patient discussion. Doses and positions are the clinician's decision.
+      Patient photographs are personal data: keep saved plans and images on the clinic system.</div>
+  </aside>
+</div>
+<div id="printArea"><img id="printImg" alt=""></div>
+
+<script type="module">
+/* ═══════════ products and patterns ═══════════ */
+const PROCS = [
+  { id:'tox',   name:'Botulinum toxin', color:'#9d8ff0', dose:'2 U',     unit:'U'  },
+  { id:'ha',    name:'HA filler',       color:'#3ec7bd', dose:'0.1 mL',  unit:'mL' },
+  { id:'bio',   name:'Biostimulator',   color:'#e0b14a', dose:'0.2 mL',  unit:'mL' },
+  { id:'boost', name:'Skin booster',    color:'#5aa2ee', dose:'0.05 mL', unit:'mL' },
+  { id:'thread',name:'Thread',          color:'#e58a52', dose:'1',       unit:''   },
+  { id:'note',  name:'Note',            color:'#c0c8d2', dose:'',        unit:''   },
+];
+const PROC = Object.fromEntries(PROCS.map(p=>[p.id,p]));
+const SEV = { 1:{c:'#d9a13e', n:'Caution'}, 2:{c:'#e0703c', n:'High risk'}, 3:{c:'#e04848', n:'Avoid'} };
+
+/* Standard patterns, the same table as the full planner. dx is millimetres
+   lateral, dy millimetres downward, from the named anchor; `sym` places a
+   matching point on the other side. */
+const AREAS = [
+  { id:'frontalis', group:'Toxin, upper face', name:'Forehead (frontalis)', proc:'tox', pts:[
+      { a:'nasion', dy:-45, units:'2 U' },
+      { a:'brow', dx:0,  dy:-26, sym:true, units:'2 U' },
+      { a:'brow', dx:20, dy:-21, sym:true, units:'2 U' } ] },
+  { id:'glabella', group:'Toxin, upper face', name:'Glabellar lines (11s)', proc:'tox', pts:[
+      { a:'nasion', dy:-4, units:'4 U', label:'Procerus' },
+      { a:'canthIn', dx:0, dy:-20, sym:true, units:'4 U', label:'Corrugator, medial' },
+      { a:'brow', dx:6, dy:-3, sym:true, units:'3 U', label:'Corrugator, lateral' } ] },
+  { id:'crowsfeet', group:'Toxin, upper face', name:'Crow’s feet', proc:'tox', pts:[
+      { a:'canthOut', dx:12, dy:-8, sym:true, units:'3 U' },
+      { a:'canthOut', dx:14, dy:2,  sym:true, units:'3 U' },
+      { a:'canthOut', dx:12, dy:12, sym:true, units:'2 U' } ] },
+  { id:'browlift', group:'Toxin, upper face', name:'Lateral brow lift', proc:'tox', pts:[
+      { a:'brow', dx:16, dy:-2, sym:true, units:'2 U' } ] },
+  { id:'bunny', group:'Toxin, upper face', name:'Bunny lines (nasalis)', proc:'tox', pts:[
+      { a:'nasion', dx:7, dy:12, sym:true, units:'2 U' },
+      { a:'nasion', dx:6, dy:22, sym:true, units:'1 U' } ] },
+  { id:'gummy', group:'Toxin, lower face', name:'Gummy smile (LLSAN)', proc:'tox', pts:[
+      { a:'subnasale', dx:10, dy:-8, sym:true, units:'2 U', label:'LLSAN, nasofacial groove' } ] },
+  { id:'lipflip', group:'Toxin, lower face', name:'Lip flip', proc:'tox', pts:[
+      { a:'stomion', dx:5,  dy:-8, sym:true, units:'1 U', label:'Philtral column' },
+      { a:'stomion', dx:13, dy:-6, sym:true, units:'1 U', label:'Lateral upper lip' } ] },
+  { id:'dao', group:'Toxin, lower face', name:'Marionette (DAO)', proc:'tox', pts:[
+      { a:'stomion', dx:27, dy:11, sym:true, units:'3 U', label:'DAO' } ] },
+  { id:'mentalis', group:'Toxin, lower face', name:'Chin dimpling (mentalis)', proc:'tox', pts:[
+      { a:'chin', dx:6, dy:-10, sym:true, units:'3 U' } ] },
+  { id:'masseter', group:'Toxin, lower face', name:'Masseter', proc:'tox', pts:[
+      { a:'jaw', dx:-8,  dy:-13, sym:true, units:'8 U', label:'Posterior belly' },
+      { a:'jaw', dx:-3,  dy:-23, sym:true, units:'8 U', label:'Upper belly' },
+      { a:'jaw', dx:-17, dy:-18, sym:true, units:'8 U', label:'Anterior belly' } ] },
+  { id:'cheek', group:'Filler', name:'Mid-face and cheek', proc:'ha', pts:[
+      { a:'canthOut', dx:2,  dy:20, sym:true, units:'0.3 mL', label:'Zygomatic apex' },
+      { a:'canthOut', dx:18, dy:6,  sym:true, units:'0.2 mL', label:'Zygomatic arch' },
+      { a:'canthIn',  dx:11, dy:28, sym:true, units:'0.2 mL', label:'Anteromedial cheek' } ] },
+  { id:'temple', group:'Filler', name:'Temple', proc:'ha', pts:[
+      { a:'canthOut', dx:16, dy:-20, sym:true, units:'0.3 mL', label:'Supraperiosteal' } ] },
+  { id:'teartrough', group:'Filler', name:'Tear trough', proc:'ha', pts:[
+      { a:'canthIn',  dx:6,  dy:11, sym:true, units:'0.1 mL', label:'Medial trough' },
+      { a:'canthOut', dx:-10,dy:12, sym:true, units:'0.1 mL', label:'Mid-pupil' } ] },
+  { id:'piriform', group:'Filler', name:'Piriform aperture', proc:'ha', pts:[
+      { a:'subnasale', dx:9, dy:1, sym:true, units:'0.15 mL', label:'Pyriform rim' } ] },
+  { id:'nasolabial', group:'Filler', name:'Nasolabial fold', proc:'ha', pts:[
+      { a:'subnasale', dx:19, dy:7,  sym:true, units:'0.15 mL', label:'Upper fold' },
+      { a:'stomion',   dx:28, dy:-3, sym:true, units:'0.15 mL', label:'Lower fold' } ] },
+  { id:'lips', group:'Filler', name:'Lips', proc:'ha', pts:[
+      { a:'stomion', dx:5,  dy:-8, sym:true, units:'0.1 mL', label:'Cupid’s bow' },
+      { a:'stomion', dx:14, dy:-6, sym:true, units:'0.1 mL', label:'Upper vermilion' },
+      { a:'stomion', dx:9,  dy:8,  sym:true, units:'0.1 mL', label:'Lower lip body' } ] },
+  { id:'jawline', group:'Filler', name:'Jawline and chin', proc:'ha', pts:[
+      { a:'jaw',  dx:0,   dy:0,  sym:true, units:'0.4 mL', label:'Gonial angle' },
+      { a:'jaw',  dx:-18, dy:6,  sym:true, units:'0.3 mL', label:'Mandibular body' },
+      { a:'chin', dx:22,  dy:-6, sym:true, units:'0.2 mL', label:'Prejowl sulcus' },
+      { a:'chin', dx:0,   dy:-2, units:'0.3 mL', label:'Menton' } ] },
+  { id:'chinproj', group:'Filler', name:'Chin projection', proc:'ha', pts:[
+      { a:'chin', dy:-8, units:'0.4 mL' } ] },
+  { id:'booster', group:'Skin', name:'Skin booster, cheek grid', proc:'boost', pts:[
+      { a:'canthIn',  dx:8,  dy:22, sym:true, units:'0.05 mL' },
+      { a:'canthOut', dx:-4, dy:20, sym:true, units:'0.05 mL' },
+      { a:'canthIn',  dx:12, dy:42, sym:true, units:'0.05 mL' },
+      { a:'canthOut', dx:-6, dy:40, sym:true, units:'0.05 mL' },
+      { a:'mouth',    dx:12, dy:-8, sym:true, units:'0.05 mL' } ] },
+];
+
+/* Key points, by MediaPipe FaceMesh index. R is the patient's right, which is
+   the left of a front photograph. */
+const KEYS = [
+  { id:'glabella',  mp:9,   label:'Glabella' },
+  { id:'nasion',    mp:168, label:'Nasion' },
+  { id:'noseTip',   mp:1,   label:'Nose tip' },
+  { id:'subnasale', mp:2,   label:'Subnasale' },
+  { id:'chin',      mp:152, label:'Menton' },
+  { id:'browR',     mp:105, label:'Brow, right' },
+  { id:'browL',     mp:334, label:'Brow, left' },
+  { id:'canthOutR', mp:33,  label:'Outer eye corner, right' },
+  { id:'canthInR',  mp:133, label:'Inner eye corner, right' },
+  { id:'canthInL',  mp:362, label:'Inner eye corner, left' },
+  { id:'canthOutL', mp:263, label:'Outer eye corner, left' },
+  { id:'alaR',      mp:129, label:'Alar edge, right' },
+  { id:'alaL',      mp:358, label:'Alar edge, left' },
+  { id:'mouthR',    mp:61,  label:'Mouth corner, right' },
+  { id:'mouthL',    mp:291, label:'Mouth corner, left' },
+  { id:'lipUp',     mp:13,  label:'Upper lip, inner' },
+  { id:'lipLo',     mp:14,  label:'Lower lip, inner' },
+  { id:'jawR',      mp:172, label:'Jaw angle, right' },
+  { id:'jawL',      mp:397, label:'Jaw angle, left' },
+  { id:'faceR',     mp:234, label:'Face edge, right' },
+  { id:'faceL',     mp:454, label:'Face edge, left' },
+];
+/* A mean face in the same layout, from 26 scans: origin between the outer eye
+   corners, unit the distance between them, y down. Used when the detector is
+   not available, for placing the points by hand. */
+const TEMPLATE = {
+  glabella:[0,-0.22], nasion:[0,-0.05], noseTip:[0,0.43], subnasale:[0,0.49], chin:[0,1.15],
+  browR:[-0.47,-0.28], browL:[0.47,-0.28], canthOutR:[-0.5,0], canthInR:[-0.2,0], canthInL:[0.2,0], canthOutL:[0.5,0],
+  alaR:[-0.227,0.40], alaL:[0.227,0.40], mouthR:[-0.26,0.75], mouthL:[0.26,0.75], lipUp:[0,0.737], lipLo:[0,0.756],
+  jawR:[-0.69,0.84], jawL:[0.69,0.84], faceR:[-0.85,0.13], faceL:[0.85,0.13], hairline:[0,-0.95],
+};
+const IRIS_MM = 11.7;
+
+/* ═══════════ state ═══════════ */
+const S = {
+  img:null, imgName:'', dataUrl:'', W:0, H:0,
+  K:null, iris:null, detected:false,
+  marks:[], sel:null, seq:1,
+  proc:'tox', mode:'mark',
+  scaleSrc:'iris', rulerMmPerPx:null, ruler:[],
+  view:{ s:1, ox:0, oy:0 },
+  dzOff:new Set(), undo:[],
+  L:null, bg:'face', segConf:null, masks:null, cut:null, hairFromSeg:false,
+  mesh:null, yaw:0, texDirty:true, texS:0,
+};
+const $ = s => document.querySelector(s);
+const cv = $('#cv'), ctx = cv.getContext('2d');
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+$('#pDate').value = new Date().toISOString().slice(0,10);
+
+/* ═══════════ geometry ═══════════ */
+const sub = (a,b)=>[a[0]-b[0], a[1]-b[1]], add=(a,b)=>[a[0]+b[0], a[1]+b[1]];
+const mul = (a,k)=>[a[0]*k, a[1]*k], dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
+const len = a=>Math.hypot(a[0],a[1]), mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
+const lerp = (a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+
+/* The face's own frame: ex along the outer eye corners (toward the patient's
+   left), ey perpendicular to it pointing down, origin on the midline between
+   the inner eye corners. A tilted head tilts the guides with it. */
+function frame(){
+  const K = S.K;
+  let ex = sub(K.canthOutL, K.canthOutR); const L = len(ex) || 1; ex = mul(ex, 1/L);
+  const ey = [-ex[1], ex[0]];
+  const o = mid(K.canthInR, K.canthInL);
+  const u = L;                                   // outer canthal span, px
+  const toF = p => { const d = sub(p,o); return [dot(d,ex), dot(d,ey)]; };
+  const fromF = (x,y) => add(o, add(mul(ex,x), mul(ey,y)));
+  return { ex, ey, o, u, toF, fromF };
+}
+function stomion(){ return mid(S.K.lipUp, S.K.lipLo); }
+function mmPerPx(){
+  if (S.scaleSrc === 'ruler' && S.rulerMmPerPx) return S.rulerMmPerPx;
+  if (S.scaleSrc === 'iris' && S.iris) return S.iris;
+  return 90 / frame().u;
+}
+function scaleName(){
+  if (S.scaleSrc === 'ruler' && S.rulerMmPerPx) return 'ruler';
+  if (S.scaleSrc === 'iris' && S.iris) return 'iris';
+  return '90 mm outer canthi';
+}
+
+/* ═══════════ danger zones ═══════════
+   Same construction as the full planner, in the photograph's plane. u is the
+   outer canthal span. Each zone is a chain of discs. */
+function dangerZones(){
+  if (!S.K) return [];
+  const K = S.K, F = frame(), u = F.u;
+  const chain = (pts, r, n) => { const o=[]; for (let s=0;s<pts.length-1;s++) for (let i=0;i<n;i++) o.push({c:lerp(pts[s],pts[s+1],i/(n-1||1)), r}); return o; };
+  const lat = (p, k) => { const f = F.toF(p); return F.fromF(f[0]*k, f[1]); };
+  const browMid = mid(K.browR, K.browL);
+  const Z = [];
+  Z.push({ id:'glabella', name:'Glabella, supratrochlear', sev:3, discs:chain([K.nasion, browMid], 0.10*u, 4) });
+  Z.push({ id:'nasal', name:'Nasal dorsum and tip', sev:3, discs:chain([K.nasion, K.noseTip, K.subnasale], 0.085*u, 4) });
+  for (const [side, sg] of [['R',-1],['L',1]]){
+    const ci = K['canthIn'+side], co = K['canthOut'+side], mo = K['mouth'+side], br = K['brow'+side];
+    const sn = K.subnasale;
+    const fS = F.toF(sn), fC = F.toF(ci), fM = F.toF(mo);
+    const fa = lerp(fS, fM, 0.32); fa[1] = fS[1] + (fC[1]-fS[1])*0.18;
+    const ala = F.fromF(fa[0], fa[1]);
+    const nm = side === 'R' ? 'right' : 'left';
+    Z.push({ id:'angular'+side, name:'Angular artery', side:nm, sev:3, discs:chain([ci, ala], 0.075*u, 5) });
+    const mOut = lat(mo, 1.18);
+    const jaw = lat(lerp(K.chin, mo, 0.55), 1.45);
+    Z.push({ id:'facial'+side, name:'Facial artery, nasolabial', side:nm, sev:2, discs:chain([ala, mOut, jaw], 0.085*u, 4) });
+    const fco = F.toF(co);
+    const temple = F.fromF(fco[0] + sg*0.28*u, fco[1] - 0.42*u);
+    Z.push({ id:'temporal'+side, name:'Temporal', side:nm, sev:2, discs:[{c:temple, r:0.16*u}, {c:lerp(temple,co,0.45), r:0.12*u}] });
+    const eyeC = mid(co, ci), fe = F.toF(eyeC);
+    Z.push({ id:'infraorb'+side, name:'Infraorbital foramen', side:nm, sev:1, discs:[{c:F.fromF(fe[0], fe[1]+0.34*u), r:0.13*u}] });
+    const fb = F.toF(br);
+    Z.push({ id:'supraorb'+side, name:'Supraorbital notch', side:nm, sev:2, discs:[{c:F.fromF(fe[0], fb[1]+0.02*u), r:0.07*u}] });
+    const fch = F.toF(K.chin);
+    Z.push({ id:'mental'+side, name:'Mental foramen', side:nm, sev:1, discs:[{c:F.fromF(fe[0]*0.95, fM[1] + (fch[1]-fM[1])*0.55), r:0.075*u}] });
+  }
+  return Z;
+}
+function zoneHits(p){
+  const out = [];
+  for (const z of dangerZones()){
+    if (S.dzOff.has(z.id)) continue;
+    if (z.discs.some(d => len(sub(p, d.c)) <= d.r)) out.push(z);
+  }
+  return out;
+}
+
+/* ═══════════ proportions ═══════════ */
+function thirds(){
+  const F = frame(), K = S.K;
+  const t = F.toF(K.hairline)[1], g = F.toF(K.glabella)[1], s = F.toF(K.subnasale)[1], m = F.toF(K.chin)[1];
+  return { ys:[t,g,s,m], seg:[g-t, s-g, m-s] };
+}
+function fifths(){
+  const F = frame(), K = S.K;
+  const xs = ['faceR','canthOutR','canthInR','canthInL','canthOutL','faceL'].map(id => F.toF(K[id])[0]);
+  const seg = []; for (let i=0;i<5;i++) seg.push(xs[i+1]-xs[i]);
+  return { xs, seg };
+}
+
+/* ═══════════ drawing ═══════════
+   One routine for the screen and for the downloaded image. T maps photo
+   pixels to canvas pixels; px is the size of one interface pixel in canvas
+   pixels, so lines and labels read the same at any zoom or output size. */
+function drawScene(g, T, px, opts){
+  opts = opts || {};
+  const P = p => [p[0]*T.s + T.ox, p[1]*T.s + T.oy];
+  g.drawImage((S.bg !== 'off' && S.cut) ? S.cut : S.img, T.ox, T.oy, S.W*T.s, S.H*T.s);
+  if (!S.K) return;
+  const F = frame(), K = S.K;
+  const th = thirds(), ff = fifths();
+  const yTop = th.ys[0] - 0.08*F.u, yBot = th.ys[3] + 0.06*F.u;
+  const xL = ff.xs[0] - 0.12*F.u, xR = ff.xs[5] + 0.12*F.u;
+  const line = (a, b, col, w, dash) => {
+    const A = P(a), B = P(b);
+    g.save(); g.strokeStyle = col; g.lineWidth = w*px; if (dash) g.setLineDash(dash.map(d=>d*px));
+    g.beginPath(); g.moveTo(A[0],A[1]); g.lineTo(B[0],B[1]); g.stroke(); g.restore();
+  };
+  const label = (p, text, col, align, size, bg) => {
+    const A = P(p);
+    g.save(); g.font = `600 ${(size||11.5)*px}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`;
+    g.textAlign = align || 'left'; g.textBaseline = 'middle';
+    const w = g.measureText(text).width, h = (size||11.5)*px*1.35;
+    let x0 = align==='right' ? A[0]-w : align==='center' ? A[0]-w/2 : A[0];
+    // keep every label on the photograph and on the screen, so none is cut at an edge
+    const lo = Math.max(T.ox, 0) + 6*px, hi = Math.min(T.ox + S.W*T.s, g.canvas.width) - 6*px;
+    const top = Math.max(T.oy, 0) + h/2 + 2*px, bot = Math.min(T.oy + S.H*T.s, g.canvas.height) - h/2 - 2*px;
+    if (hi - lo > w){ x0 = Math.min(Math.max(x0, lo), hi - w); }
+    const yy = bot > top ? Math.min(Math.max(A[1], top), bot) : A[1];
+    g.fillStyle = bg || 'rgba(10,12,16,0.72)';
+    g.fillRect(x0-4*px, yy-h/2, w+8*px, h);
+    g.textAlign = 'left'; g.fillStyle = col; g.fillText(text, x0, yy); g.restore();
+  };
+  const mm = mmPerPx();
+
+  // danger zones underneath everything else
+  if ($('#gDanger').checked){
+    // with the background removed, the zones are kept to the skin that is shown
+    const clip = S.bg !== 'off' && S.cut && S.masks;
+    let z_g = g, layer = null;
+    if (clip){
+      layer = drawScene.layer || (drawScene.layer = document.createElement('canvas'));
+      layer.width = g.canvas.width; layer.height = g.canvas.height;
+      z_g = layer.getContext('2d');
+    }
+    for (const z of dangerZones()){
+      if (S.dzOff.has(z.id)) continue;
+      z_g.save(); z_g.fillStyle = SEV[z.sev].c; z_g.globalAlpha = 0.24;
+      z_g.beginPath();
+      for (const d of z.discs){ const c = P(d.c); z_g.moveTo(c[0]+d.r*T.s, c[1]); z_g.arc(c[0], c[1], d.r*T.s, 0, Math.PI*2); }
+      z_g.fill(); z_g.restore();
+    }
+    if (clip){
+      const Rm = S.masks.rect, M = S.masks[S.bg === 'head' ? 'head' : 'face'];
+      z_g.globalCompositeOperation = 'destination-in';
+      z_g.drawImage(M, Rm[0]*T.s + T.ox, Rm[1]*T.s + T.oy, Rm[2]*T.s, Rm[3]*T.s);
+      z_g.globalCompositeOperation = 'source-over';
+      g.drawImage(layer, 0, 0);
+    }
+  }
+  if ($('#gMid').checked){
+    line(F.fromF(0,yTop), F.fromF(0,yBot), 'rgba(110,230,220,0.95)', 1.4, [6,4]);
+  }
+  if ($('#gThirds').checked){
+    const tot = th.seg[0]+th.seg[1]+th.seg[2];
+    const names = ['Hairline','Glabella','Subnasale','Menton'];
+    th.ys.forEach((y,i) => {
+      line(F.fromF(xL,y), F.fromF(xR,y), i===0 ? 'rgba(240,200,110,0.9)' : 'rgba(240,200,110,0.95)', 1.5, i===0 ? [3,4] : null);
+      label(F.fromF(xL - 0.02*F.u, y), names[i] + (i===0 ? ' (estimate, drag)' : ''), '#f0c86e', 'right', 10.5);
+    });
+    for (let i=0;i<3;i++){
+      const yc = (th.ys[i]+th.ys[i+1])/2;
+      label(F.fromF(xR + 0.03*F.u, yc), `${['Upper','Middle','Lower'][i]} ${Math.round(th.seg[i]*mm)} mm · ${Math.round(100*th.seg[i]/tot)}%`, '#f0c86e', 'left', 11);
+    }
+  }
+  if ($('#gFifths').checked){
+    const eye = (ff.seg[1] + ff.seg[3])/2;
+    ff.xs.forEach(x => line(F.fromF(x, yTop), F.fromF(x, yBot), 'rgba(140,200,255,0.85)', 1.2, [2,3]));
+    const yl = yTop - 0.04*F.u;
+    for (let i=0;i<5;i++){
+      const xc = (ff.xs[i]+ff.xs[i+1])/2;
+      label(F.fromF(xc, yl), `${Math.round(ff.seg[i]*mm)} mm`, '#a8d4ff', 'center', 10.5);
+    }
+  }
+  if ($('#gKeys').checked || S.mode === 'move'){
+    for (const k of [...KEYS, {id:'hairline', label:'Hairline'}]){
+      const c = P(K[k.id]);
+      g.save(); g.lineWidth = 1.6*px; g.strokeStyle = '#0b0d10'; g.fillStyle = '#ffb347';
+      g.beginPath(); g.arc(c[0], c[1], 4.5*px, 0, Math.PI*2); g.fill(); g.stroke(); g.restore();
+    }
+  }
+  // the ruler in progress, or the last one used
+  if (S.ruler.length){
+    const a = S.ruler[0], b = S.ruler[1] || a;
+    line(a, b, '#ffffff', 2, null);
+    for (const q of S.ruler){ const c = P(q); g.save(); g.fillStyle='#fff'; g.beginPath(); g.arc(c[0],c[1],4*px,0,Math.PI*2); g.fill(); g.restore(); }
+  }
+  // the marks
+  const nums = $('#gNums').checked;
+  S.marks.forEach((m, i) => {
+    const c = P([m.x, m.y]), pr = PROC[m.proc] || PROC.note;
+    const hit = zoneHits([m.x, m.y]).length > 0;
+    const r = 6.5*px;
+    g.save();
+    if (m.id === S.sel && !opts.export){ g.strokeStyle = '#fff'; g.lineWidth = 2*px; g.beginPath(); g.arc(c[0],c[1], r+4*px, 0, Math.PI*2); g.stroke(); }
+    if (hit){ g.strokeStyle = '#ff5050'; g.lineWidth = 2.4*px; g.beginPath(); g.arc(c[0],c[1], r+2.5*px, 0, Math.PI*2); g.stroke(); }
+    g.fillStyle = pr.color; g.strokeStyle = '#0b0d10'; g.lineWidth = 1.5*px;
+    g.beginPath(); g.arc(c[0], c[1], r, 0, Math.PI*2); g.fill(); g.stroke();
+    g.fillStyle = '#0b0d10'; g.font = `700 ${8.5*px}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(i+1), c[0], c[1]+0.4*px);
+    g.restore();
+    if (nums && m.dose) label([m.x + (r+5*px)/T.s, m.y], m.dose, pr.color, 'left', 10, 'rgba(10,12,16,0.62)');
+  });
+}
+
+/* ═══════════ the view ═══════════ */
+function resize(){
+  const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  cv.width = Math.max(1, Math.round(r.width*d)); cv.height = Math.max(1, Math.round(r.height*d));
+  redraw(true);
+}
+new ResizeObserver(resize).observe($('#stage'));
+function fit(){
+  if (!S.img) return;
+  const r = cv.getBoundingClientRect();
+  // fit the face when there is one, else the whole photograph
+  let box = [0,0,S.W,S.H];
+  if (S.K){
+    const F = frame(), th = thirds(), ff = fifths();
+    const pts = [F.fromF(ff.xs[0]-0.35*F.u, th.ys[0]-0.2*F.u), F.fromF(ff.xs[5]+0.55*F.u, th.ys[3]+0.15*F.u)];
+    box = [Math.max(0,Math.min(pts[0][0],pts[1][0])), Math.max(0,Math.min(pts[0][1],pts[1][1])),
+           Math.min(S.W,Math.max(pts[0][0],pts[1][0])), Math.min(S.H,Math.max(pts[0][1],pts[1][1]))];
+  }
+  const bw = box[2]-box[0], bh = box[3]-box[1];
+  // keep the face clear of the toolbar above and the zoom buttons below
+  const tb = $('#toolbar').hidden ? 0 : $('#toolbar').getBoundingClientRect().bottom - r.top + 4;
+  const top = Math.max(0, tb), bot = 50, ah = Math.max(50, r.height - top - bot);
+  const s = Math.min(r.width/bw, ah/bh)*0.97;
+  S.view = { s, ox:(r.width - bw*s)/2 - box[0]*s, oy:top + (ah - bh*s)/2 - box[1]*s };
+  redraw(true);
+}
+let raf = 0;
+/* viewOnly: only the zoom, pan or turn changed, so the turned view keeps its overlay. */
+function redraw(viewOnly){
+  if (!viewOnly) S.texDirty = true;
+  if (raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = 0;
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height);
+    if (!S.img) return;
+    if (is3D() && draw3D()) return;
+    const d = window.devicePixelRatio || 1;
+    drawScene(ctx, { s:S.view.s*d, ox:S.view.ox*d, oy:S.view.oy*d }, d);
+  });
+}
+const toImg = (cx, cy) => [(cx - S.view.ox)/S.view.s, (cy - S.view.oy)/S.view.s];
+function zoomAt(k, cx, cy){
+  const r = cv.getBoundingClientRect();
+  if (cx === undefined){ cx = r.width/2; cy = r.height/2; }
+  const p = toImg(cx, cy);
+  S.view.s = Math.min(40, Math.max(0.02, S.view.s*k));
+  S.view.ox = cx - p[0]*S.view.s; S.view.oy = cy - p[1]*S.view.s;
+  redraw(true);
+}
+$('#zIn').onclick = () => zoomAt(1.25);
+$('#zOut').onclick = () => zoomAt(1/1.25);
+$('#zFit').onclick = fit;
+cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY*0.0015), e.clientX-r.left, e.clientY-r.top); }, { passive:false });
+
+/* ═══════════ face mesh topology ═══════════
+   Triangles of the MediaPipe face mesh (468 points) and the face outline in
+   order, used for the background cut and the turning view. */
+const TRIS = [0,11,37,0,11,267,0,37,164,0,164,267,1,4,44,1,4,274,1,19,44,1,19,274,2,94,141,2,94,370,2,97,141,2,97,167,2,164,167,2,164,393,2,326,370,2,326,393,3,51,195,3,51,236,3,195,197,3,196,197,3,196,236,4,5,51,4,5,281,4,44,45,4,45,51,4,274,275,4,275,281,5,51,195,5,195,281,6,122,168,6,122,196,6,168,351,6,196,197,6,197,419,6,351,419,7,25,33,7,25,110,7,110,163,8,9,55,8,9,285,8,55,193,8,168,193,8,168,417,8,285,417,9,55,107,9,107,108,9,108,151,9,151,337,9,285,336,9,336,337,10,109,151,10,151,338,11,12,72,11,12,302,11,37,72,11,267,302,12,13,38,12,13,268,12,38,72,12,268,302,13,38,82,13,268,312,14,15,86,14,15,316,14,86,87,14,316,317,15,16,85,15,16,315,15,85,86,15,315,316,16,17,85,16,17,315,17,18,83,17,18,313,17,83,84,17,84,85,17,313,314,17,314,315,18,83,201,18,200,201,18,200,421,18,313,421,19,44,125,19,94,141,19,94,370,19,125,141,19,274,354,19,354,370,20,60,99,20,60,166,20,79,166,20,79,238,20,99,242,20,238,242,21,54,68,21,68,71,21,71,162,22,23,145,22,23,230,22,26,154,22,26,231,22,145,153,22,153,154,22,230,231,23,24,144,23,24,229,23,144,145,23,229,230,24,110,144,24,110,228,24,228,229,25,31,226,25,31,228,25,33,130,25,110,228,25,130,226,26,112,155,26,112,232,26,154,155,26,231,232,27,28,159,27,28,222,27,29,160,27,29,223,27,159,160,27,222,223,28,56,157,28,56,221,28,157,158,28,158,159,28,221,222,29,30,160,29,30,224,29,223,224,30,160,161,30,161,247,30,224,225,30,225,247,31,111,117,31,111,226,31,117,228,32,140,171,32,140,211,32,171,208,32,194,201,32,194,211,32,201,208,33,130,247,33,246,247,34,127,139,34,127,234,34,139,156,34,143,156,34,143,227,34,227,234,35,111,143,35,111,226,35,113,124,35,113,226,35,124,143,36,100,101,36,100,142,36,101,205,36,142,203,36,203,206,36,205,206,37,39,72,37,39,167,37,164,167,38,41,72,38,41,81,38,81,82,39,40,73,39,40,92,39,72,73,39,92,165,39,165,167,40,73,74,40,74,185,40,92,186,40,185,186,41,42,74,41,42,81,41,72,73,41,73,74,42,74,184,42,80,81,42,80,183,42,183,184,43,57,61,43,57,202,43,61,146,43,91,106,43,91,146,43,106,204,43,202,204,44,45,220,44,125,237,44,220,237,45,51,134,45,134,220,46,53,63,46,53,225,46,63,70,46,70,156,46,113,124,46,113,225,46,124,156,47,100,121,47,100,126,47,114,128,47,114,217,47,121,128,47,126,217,48,49,64,48,49,131,48,64,235,48,115,131,48,115,219,48,219,235,49,64,102,49,64,129,49,102,129,49,129,209,49,131,209,50,101,118,50,101,205,50,117,118,50,117,123,50,123,187,50,187,205,51,134,236,52,53,63,52,53,223,52,63,105,52,65,66,52,65,222,52,66,105,52,222,223,53,223,224,53,224,225,54,68,104,54,103,104,55,65,107,55,65,221,55,189,193,55,189,221,56,157,173,56,173,190,56,190,221,57,61,185,57,185,186,57,186,212,57,202,212,58,132,177,58,172,215,58,177,215,59,75,166,59,75,235,59,166,219,59,219,235,60,75,166,60,75,240,60,99,240,61,76,146,61,76,184,61,184,185,62,76,77,62,76,183,62,77,96,62,78,96,62,78,191,62,183,191,63,68,71,63,68,104,63,70,71,63,104,105,64,98,129,64,98,240,64,102,129,64,235,240,65,66,107,65,221,222,66,69,105,66,69,107,67,69,104,67,69,108,67,103,104,67,108,109,69,104,105,69,107,108,70,71,139,70,139,156,71,139,162,74,184,185,75,235,240,76,77,146,76,183,184,77,90,91,77,90,96,77,91,146,78,95,96,79,166,218,79,218,237,79,237,239,79,238,239,80,183,191,83,84,181,83,181,182,83,182,201,84,85,180,84,180,181,85,86,179,85,179,180,86,87,178,86,178,179,88,89,96,88,89,179,88,95,96,88,178,179,89,90,96,89,90,180,89,179,180,90,91,181,90,180,181,91,106,182,91,181,182,92,165,206,92,186,216,92,206,216,93,132,137,93,137,227,93,227,234,97,98,99,97,98,165,97,99,242,97,141,242,97,165,167,98,99,240,98,129,203,98,165,203,100,101,120,100,120,121,100,126,142,101,118,119,101,119,120,106,182,194,106,194,204,108,109,151,110,144,163,111,116,123,111,116,143,111,117,123,112,133,155,112,133,243,112,232,233,112,233,244,112,243,244,113,225,247,113,226,247,114,128,188,114,174,188,114,174,217,115,131,220,115,218,219,115,218,220,116,123,137,116,137,227,116,143,227,117,118,229,117,228,229,118,119,230,118,229,230,119,120,230,120,121,232,120,230,231,120,231,232,121,128,232,122,168,193,122,188,196,122,188,245,122,193,245,123,137,177,123,147,177,123,147,187,124,143,156,125,141,241,125,237,241,126,129,142,126,129,209,126,209,217,127,139,162,128,188,245,128,232,233,128,233,245,129,142,203,130,226,247,131,134,198,131,134,220,131,198,209,132,137,177,133,173,190,133,190,243,134,198,236,135,136,138,135,136,150,135,138,192,135,150,169,135,169,214,135,192,214,136,138,172,138,172,215,138,192,213,138,213,215,140,148,171,140,148,176,140,170,176,140,170,211,141,241,242,147,177,215,147,187,213,147,213,215,148,152,175,148,171,175,149,150,170,149,170,176,150,169,170,151,337,338,152,175,377,161,246,247,164,267,393,165,203,206,166,218,219,168,351,417,169,170,211,169,210,211,169,210,214,171,175,199,171,199,208,174,188,196,174,196,236,174,217,236,175,199,396,175,377,396,182,194,201,186,212,216,187,192,213,187,192,214,187,205,207,187,207,214,189,190,221,189,190,243,189,193,244,189,243,244,193,244,245,194,204,211,195,197,248,195,248,281,197,248,419,198,209,217,198,217,236,199,200,208,199,200,428,199,396,428,200,201,208,200,421,428,202,204,210,202,210,214,202,212,214,204,210,211,205,206,216,205,207,216,207,212,214,207,212,216,218,220,237,233,244,245,237,239,241,238,239,241,238,241,242,248,281,456,248,419,456,249,255,263,249,255,339,249,339,390,250,290,328,250,290,392,250,309,392,250,309,459,250,328,462,250,458,459,250,458,462,251,284,298,251,298,301,251,301,389,252,253,374,252,253,450,252,256,381,252,256,451,252,374,380,252,380,381,252,450,451,253,254,373,253,254,449,253,373,374,253,449,450,254,339,373,254,339,448,254,448,449,255,261,446,255,261,448,255,263,359,255,339,448,255,359,446,256,341,382,256,341,452,256,381,382,256,451,452,257,258,386,257,258,442,257,259,387,257,259,443,257,386,387,257,442,443,258,286,384,258,286,441,258,384,385,258,385,386,258,441,442,259,260,387,259,260,444,259,443,444,260,387,388,260,388,466,260,444,445,260,445,467,260,466,467,261,340,346,261,340,446,261,346,448,262,369,396,262,369,431,262,396,428,262,418,421,262,418,431,262,421,428,263,359,467,263,466,467,264,356,368,264,356,454,264,368,383,264,372,383,264,372,447,264,447,454,265,340,372,265,340,446,265,342,353,265,342,446,265,353,372,266,329,330,266,329,371,266,330,425,266,371,423,266,423,426,266,425,426,267,269,302,267,269,393,268,271,302,268,271,311,268,311,312,269,270,303,269,270,322,269,302,303,269,322,391,269,391,393,270,303,304,270,304,409,270,322,410,270,409,410,271,272,304,271,272,311,271,302,303,271,303,304,272,304,408,272,310,311,272,310,407,272,407,408,273,287,291,273,287,422,273,291,375,273,321,335,273,321,375,273,335,424,273,422,424,274,275,440,274,354,457,274,440,457,275,281,363,275,363,440,276,283,293,276,283,445,276,293,300,276,300,383,276,342,353,276,342,445,276,353,383,277,329,350,277,329,355,277,343,357,277,343,437,277,350,357,277,355,437,278,279,294,278,279,360,278,294,455,278,344,360,278,344,439,278,439,455,279,294,331,279,294,358,279,331,358,279,358,429,279,360,429,280,330,347,280,330,425,280,346,347,280,346,352,280,352,411,280,411,425,281,363,456,282,283,293,282,283,443,282,293,334,282,295,296,282,295,442,282,296,334,282,442,443,283,443,444,283,444,445,284,298,333,284,332,333,285,295,336,285,295,441,285,413,417,285,413,441,286,384,398,286,398,414,286,414,441,287,291,409,287,409,410,287,410,432,287,422,432,288,361,401,288,397,435,288,401,435,289,290,305,289,290,392,289,305,455,289,392,439,289,439,455,290,305,460,290,328,460,291,306,375,291,306,408,291,408,409,292,306,307,292,306,407,292,307,325,292,308,325,292,308,415,292,407,415,293,298,301,293,298,333,293,300,301,293,333,334,294,327,358,294,327,460,294,331,358,294,455,460,295,296,336,295,441,442,296,299,334,296,299,336,297,299,333,297,299,337,297,332,333,297,337,338,299,333,334,299,336,337,300,301,368,300,368,383,301,368,389,304,408,409,305,455,460,306,307,375,306,407,408,307,320,321,307,320,325,307,321,375,308,324,325,309,392,438,309,438,457,309,457,459,310,407,415,313,314,405,313,405,406,313,406,421,314,315,404,314,404,405,315,316,403,315,403,404,316,317,402,316,402,403,318,319,325,318,319,403,318,324,325,318,402,403,319,320,325,319,320,404,319,403,404,320,321,405,320,404,405,321,335,406,321,405,406,322,391,426,322,410,436,322,426,436,323,361,366,323,366,447,323,447,454,326,327,328,326,327,391,326,328,462,326,370,462,326,391,393,327,328,460,327,358,423,327,391,423,329,330,349,329,349,350,329,355,371,330,347,348,330,348,349,335,406,418,335,418,424,339,373,390,340,345,352,340,345,372,340,346,352,341,362,382,341,362,463,341,452,453,341,453,464,341,463,464,342,445,467,342,446,467,343,357,412,343,399,412,343,399,437,344,360,440,344,438,439,344,438,440,345,352,366,345,366,447,345,372,447,346,347,449,346,448,449,347,348,450,347,449,450,348,349,450,349,350,452,349,450,451,349,451,452,350,357,452,351,412,419,351,412,465,351,417,465,352,366,401,352,376,401,352,376,411,353,372,383,354,370,461,354,457,461,355,358,371,355,358,429,355,429,437,356,368,389,357,412,465,357,452,453,357,453,465,358,371,423,359,446,467,360,363,420,360,363,440,360,420,429,361,366,401,362,398,414,362,414,463,363,420,456,364,365,367,364,365,379,364,367,416,364,379,394,364,394,434,364,416,434,365,367,397,367,397,435,367,416,433,367,433,435,369,377,396,369,377,400,369,395,400,369,395,431,370,461,462,376,401,435,376,411,433,376,433,435,378,379,395,378,395,400,379,394,395,391,423,426,392,438,439,394,395,431,394,430,431,394,430,434,399,412,419,399,419,456,399,437,456,406,418,421,410,432,436,411,416,433,411,416,434,411,425,427,411,427,434,413,414,441,413,414,463,413,417,464,413,463,464,417,464,465,418,424,431,420,429,437,420,437,456,422,424,430,422,430,434,422,432,434,424,430,431,425,426,436,425,427,436,427,432,434,427,432,436,438,440,457,453,464,465,457,459,461,458,459,461,458,461,462];
+const OVAL = [10,109,67,103,54,21,162,127,234,93,132,58,172,136,150,149,176,148,152,377,400,378,379,365,397,288,361,323,454,356,389,251,284,332,297,338];
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const smooth = (a, b, v) => { const t = clamp((v-a)/(b-a), 0, 1); return t*t*(3-2*t); };
+/* Canvases on phones are limited to about 16 million pixels, so the cut photo
+   is made smaller when the photograph is larger than that. */
+const AREA_MAX = 16e6;
+
+/* ═══════════ background removal ═══════════
+   The segmentation model sorts each pixel into background, hair, body skin,
+   face skin, clothes or other. "Face only" keeps face skin; "Face, hair and
+   neck" adds hair and body skin. The face outline from the landmarks is added
+   to both, so the eyes, brows, lips and beard are never cut out. Without the
+   model the outline alone is used, raised to the hairline. */
+const TV = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18';
+const SEG_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite';
+let visionP = null, filesP = null, segmenter = null;
+const vision = () => visionP || (visionP = import(TV).catch(e => { visionP = null; throw e; }));
+const files = async () => filesP || (filesP = (await vision()).FilesetResolver.forVisionTasks(TV + '/wasm'));
+async function getSegmenter(){
+  if (segmenter) return segmenter;
+  const v = await vision();
+  segmenter = await v.ImageSegmenter.createFromOptions(await files(), {
+    baseOptions:{ modelAssetPath:SEG_MODEL, delegate:'CPU' },
+    runningMode:'IMAGE', outputCategoryMask:false, outputConfidenceMasks:true });
+  return segmenter;
+}
+/* The region sent to the model: the head with its hair and the upper neck.
+   Cropping first gives the model, which works at 256 px, more pixels on the face. */
+function headRect(){
+  const F = frame(), u = F.u, th = thirds();
+  const c = [F.fromF(-1.25*u, th.ys[0]-0.75*u), F.fromF(1.25*u, th.ys[0]-0.75*u),
+             F.fromF(-1.25*u, th.ys[3]+0.7*u), F.fromF(1.25*u, th.ys[3]+0.7*u)];
+  const x0 = clamp(Math.min(...c.map(p=>p[0])), 0, S.W), x1 = clamp(Math.max(...c.map(p=>p[0])), 0, S.W);
+  const y0 = clamp(Math.min(...c.map(p=>p[1])), 0, S.H), y1 = clamp(Math.max(...c.map(p=>p[1])), 0, S.H);
+  return [x0, y0, Math.max(1, x1-x0), Math.max(1, y1-y0)];
+}
+async function segment(){
+  S.segConf = null;
+  const R = headRect(), k = 512/Math.max(R[2], R[3]);
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(R[2]*k)); c.height = Math.max(1, Math.round(R[3]*k));
+  c.getContext('2d').drawImage(S.img, R[0], R[1], R[2], R[3], 0, 0, c.width, c.height);
+  FPL.lastCrop = R;
+  try {
+    const seg = await getSegmenter();
+    const res = seg.segment(c);
+    const m = res && res.confidenceMasks;
+    if (m && m.length >= 4){
+      const w = m[0].width, h = m[0].height;
+      const hair = m[1].getAsFloat32Array().slice(), body = m[2].getAsFloat32Array().slice(), face = m[3].getAsFloat32Array().slice();
+      if (res.close) res.close();
+      hairlineFromSeg(face, hair, w, h, R);
+      const fo = new Float32Array(w*h), ho = new Float32Array(w*h);
+      for (let i=0;i<w*h;i++){ fo[i] = smooth(0.3, 0.7, face[i]); ho[i] = smooth(0.3, 0.7, Math.max(face[i], hair[i], body[i])); }
+      S.segConf = { rect:R, w, h, face:fo, head:ho };
+    } else if (res && res.close) res.close();
+  } catch (e){ console.warn('Background model not available:', e); }
+  return !!S.segConf;
+}
+/* Face skin stops at the hairline, which gives a better upper third than the
+   estimate. Walk up the midline and two lines beside it from the top of the
+   landmark mesh; accept the result only when the hair starts there and the
+   upper third comes out between 0.6 and 1.5 of the middle third. */
+function hairlineFromSeg(face, hair, w, h, R){
+  if (!S.L) return;
+  const F = frame(), u = F.u;
+  const at = (arr, a, b) => {
+    const p = F.fromF(a, b);
+    const x = Math.floor((p[0]-R[0])/R[2]*w), y = Math.floor((p[1]-R[1])/R[3]*h);
+    return (x < 0 || y < 0 || x >= w || y >= h) ? 0 : arr[y*w + x];
+  };
+  const b10 = F.toF([S.L[10][0], S.L[10][1]])[1], gl = F.toF(S.K.glabella)[1], step = u/120;
+  const found = [];
+  for (const a of [-0.12*u, 0, 0.12*u]){
+    for (let b = b10; b > gl - 1.7*u; b -= step){
+      if (at(face, a, b) < 0.5 && at(face, a, b-step) < 0.5 && at(face, a, b-2*step) < 0.5){ found.push(b); break; }
+    }
+  }
+  if (found.length < 2) return;
+  found.sort((p,q)=>p-q);
+  const b = found[Math.floor(found.length/2)];
+  if (at(hair, 0, b - 0.06*u) < 0.4) return;               // no hair above: bald or a cap, keep the estimate
+  const mid3 = thirds().seg[1], up = gl - b;
+  if (up/mid3 < 0.6 || up/mid3 > 1.5) return;
+  const a0 = F.toF(S.K.hairline)[0];
+  S.K.hairline = F.fromF(a0, b); S.hairFromSeg = true;
+}
+/* The face outline in photo pixels: the landmark oval with its upper part
+   raised to the hairline, or, with no landmarks, an ellipse on the key points. */
+function outline(){
+  const F = frame(), K = S.K, u = F.u;
+  const bH = F.toF(K.hairline)[1], bC = F.toF(K.chin)[1];
+  if (!S.L){
+    const aR = F.toF(K.faceR)[0], aL = F.toF(K.faceL)[0], ac = (aR+aL)/2, A = (aL-aR)/2*1.02;
+    const bc = (bH+bC)/2, B = (bC-bH)/2;
+    const pts = []; for (let i=0;i<48;i++){ const t = i/48*Math.PI*2; pts.push(F.fromF(ac + A*Math.cos(t), bc + B*Math.sin(t))); }
+    return pts;
+  }
+  const bB = F.toF(mid(K.browR, K.browL))[1];
+  const fs = OVAL.map(i => F.toF([S.L[i][0], S.L[i][1]]));
+  const bT = Math.min(...fs.map(f=>f[1]));
+  const k = (bH < bT && bB > bT) ? (bB - bH)/(bB - bT) : 1;
+  return fs.map(f => f[1] < bB ? F.fromF(f[0], bB - (bB - f[1])*k) : F.fromF(f[0], f[1]));
+}
+function maskCanvas(w, h){ const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+/* Draws the outline into a w by h alpha array over rect R. It is drawn at a
+   sixth of the size and enlarged, which softens the edge. */
+function outlineAlpha(R, w, h, grow, lift){
+  const sw = Math.max(8, Math.round(w/6)), sh = Math.max(8, Math.round(h/6));
+  const small = maskCanvas(sw, sh), g = small.getContext('2d');
+  const F = frame(), pts = outline(), c = F.fromF(0, (F.toF(S.K.hairline)[1] + F.toF(S.K.chin)[1])/2);
+  g.fillStyle = '#fff'; g.beginPath();
+  pts.forEach((p, i) => {
+    let q = add(c, mul(sub(p, c), grow));
+    if (lift){ const f = F.toF(q); if (f[1] < F.toF(c)[1]) q = F.fromF(f[0], f[1] - lift*F.u); }
+    const x = (q[0]-R[0])/R[2]*sw, y = (q[1]-R[1])/R[3]*sh;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  });
+  g.closePath(); g.fill();
+  const big = maskCanvas(w, h), bg = big.getContext('2d');
+  bg.imageSmoothingEnabled = true; bg.imageSmoothingQuality = 'high'; bg.drawImage(small, 0, 0, w, h);
+  const d = bg.getImageData(0, 0, w, h).data, a = new Float32Array(w*h);
+  for (let i=0;i<w*h;i++) a[i] = d[i*4+3]/255;
+  return a;
+}
+/* The two masks, as canvases over the head rect with the mask in alpha. */
+function makeMasks(){
+  S.masks = null;
+  if (!S.K || !S.img) return;
+  const sc = S.segConf;
+  const R = sc ? sc.rect : headRect();
+  const w = sc ? sc.w : Math.max(8, Math.round(512*R[2]/Math.max(R[2],R[3]))), h = sc ? sc.h : Math.max(8, Math.round(512*R[3]/Math.max(R[2],R[3])));
+  const o = outlineAlpha(R, w, h, 1, 0);
+  const gate = sc ? outlineAlpha(R, w, h, 1.3, 0.15) : null;       // face skin far from this face is ignored
+  const oHead = sc ? null : outlineAlpha(R, w, h, 1.16, 0.22);     // without the model: a larger outline for hair
+  const mk = which => {
+    const c = maskCanvas(w, h), g = c.getContext('2d'), im = g.createImageData(w, h), d = im.data;
+    for (let i=0;i<w*h;i++){
+      let a;
+      if (which === 'face') a = sc ? Math.max(o[i], sc.face[i]*gate[i]) : o[i];
+      else a = sc ? Math.max(o[i], sc.head[i]) : oHead[i];
+      d[i*4] = d[i*4+1] = d[i*4+2] = 255; d[i*4+3] = Math.round(a*255);
+    }
+    g.putImageData(im, 0, 0); return c;
+  };
+  S.masks = { rect:R, face:mk('face'), head:mk('head') };
+}
+function buildCut(){
+  S.cut = null;
+  if (S.bg === 'off' || !S.masks || !S.img) return;
+  const k = Math.min(1, Math.sqrt(AREA_MAX/(S.W*S.H)));
+  const c = S.cutCanvas || (S.cutCanvas = document.createElement('canvas'));
+  c.width = Math.round(S.W*k); c.height = Math.round(S.H*k);
+  const g = c.getContext('2d'), R = S.masks.rect, M = S.masks[S.bg === 'head' ? 'head' : 'face'];
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.drawImage(S.img, 0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'destination-in';
+  g.drawImage(M, R[0]*k, R[1]*k, R[2]*k, R[3]*k);
+  g.globalCompositeOperation = 'destination-over';
+  g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'source-over';
+  S.cut = c;
+}
+function refreshBackground(){ makeMasks(); buildCut(); renderBg(); }
+function renderBg(){
+  const el = $('#bgInfo'); if (!el) return;
+  if (!S.img) { el.textContent = ''; return; }
+  el.textContent = S.bg === 'off' ? 'Showing the original photo.'
+    : S.segConf ? 'Background removed by the segmentation model.' + (S.hairFromSeg ? ' The hairline was found from it too.' : '')
+    : 'The segmentation model could not load (it needs internet the first time), so the face outline from the key points is used.';
+}
+$('#bgSel').onchange = () => { S.bg = $('#bgSel').value; buildCut(); renderBg(); S.texDirty = true; redraw(); };
+
+/* ═══════════ the turning view ═══════════
+   A relief built from this photo: the landmark mesh gives the depth of the
+   face, a rounded head shape carries it out to the hair and the sides, and the
+   photograph with its guides and points is laid over it. Turning rotates it
+   about the face's vertical axis. The far side of the nose and the sides of
+   the face are not in a front photo, so they are stretched from what is. */
+const FIT_IDS = [10,151,9,108,337,67,297,69,299,50,280,117,346,123,352,187,411,205,425,101,330];
+function buildMesh(){
+  S.mesh = null; S.meshVer = (S.meshVer||0) + 1;
+  const L = S.L; if (!L) return;
+  const P2 = i => [L[i][0], L[i][1]], Z = i => L[i][2];
+  let ex = sub(P2(263), P2(33)); ex = mul(ex, 1/(len(ex)||1)); const ey = [-ex[1], ex[0]];
+  const o = mid(P2(133), P2(362));
+  const toF = (x, y) => { const dx = x-o[0], dy = y-o[1]; return [dx*ex[0]+dy*ex[1], dx*ey[0]+dy*ey[1]]; };
+  const fromF = (a, b) => [o[0] + ex[0]*a + ey[0]*b, o[1] + ex[1]*a + ey[1]*b];
+  const fR = toF(...P2(234)), fL = toF(...P2(454));
+  const ac = (fR[0]+fL[0])/2, A = (fL[0]-fR[0])/2*1.08, Bu = 1.55*A, Bd = 1.9*A;
+  const zc = (Z(234)+Z(454))/2 - 0.3*A;
+  // an ellipsoid, with its rim eased down to the back so the sides do not tear when turned
+  const shape = (a, b) => {
+    const B = b < 0 ? Bu : Bd, r2 = ((a-ac)/A)**2 + (b/B)**2;
+    if (r2 >= 1.44) return 0;
+    const r = Math.sqrt(r2); if (r <= 0.85) return Math.sqrt(1 - r2);
+    const t = (r - 0.85)/0.35;
+    return (2*t**3 - 3*t*t + 1)*0.52678 - (t**3 - 2*t*t + t)*0.56475;
+  };
+  let num = 0, den = 0;
+  for (const i of FIT_IDS){ const f = toF(...P2(i)), s = shape(f[0], f[1]); num += (Z(i)-zc)*s; den += s*s; }
+  const C = clamp(den ? num/den : A, 0.8*A, 2.2*A);
+  const zE = (a, b) => zc + C*shape(a, b);
+  const cs = [fromF(ac-1.25*A, -1.25*Bu), fromF(ac+1.25*A, -1.25*Bu), fromF(ac-1.25*A, 1.25*Bd), fromF(ac+1.25*A, 1.25*Bd)];
+  const x0 = clamp(Math.min(...cs.map(p=>p[0])), 0, S.W), x1 = clamp(Math.max(...cs.map(p=>p[0])), 0, S.W);
+  const y0 = clamp(Math.min(...cs.map(p=>p[1])), 0, S.H), y1 = clamp(Math.max(...cs.map(p=>p[1])), 0, S.H);
+  const cols = 150, dx = (x1-x0)/(cols-1) || 1;
+  const rows = clamp(Math.round((y1-y0)/dx) + 1, 2, 260), dy = (y1-y0)/(rows-1) || 1;
+  const N = cols*rows, zin = new Float32Array(N), known = new Uint8Array(N), r = new Float32Array(N), ze = new Float32Array(N);
+  for (let j=0;j<rows;j++) for (let i=0;i<cols;i++){ const f = toF(x0+i*dx, y0+j*dy); ze[j*cols+i] = zE(f[0], f[1]); }
+  // the landmark mesh, rasterised onto the grid
+  for (let t=0;t<TRIS.length;t+=3){
+    const a = L[TRIS[t]], b = L[TRIS[t+1]], c = L[TRIS[t+2]];
+    const ax = (a[0]-x0)/dx, ay = (a[1]-y0)/dy, bx = (b[0]-x0)/dx, by = (b[1]-y0)/dy, cx = (c[0]-x0)/dx, cy = (c[1]-y0)/dy;
+    const D = (by-cy)*(ax-cx) + (cx-bx)*(ay-cy); if (Math.abs(D) < 1e-9) continue;
+    const i0 = Math.max(0, Math.ceil(Math.min(ax,bx,cx))), i1 = Math.min(cols-1, Math.floor(Math.max(ax,bx,cx)));
+    const j0 = Math.max(0, Math.ceil(Math.min(ay,by,cy))), j1 = Math.min(rows-1, Math.floor(Math.max(ay,by,cy)));
+    for (let j=j0;j<=j1;j++) for (let i=i0;i<=i1;i++){
+      const w0 = ((by-cy)*(i-cx) + (cx-bx)*(j-cy))/D, w1 = ((cy-ay)*(i-cx) + (ax-cx)*(j-cy))/D, w2 = 1-w0-w1;
+      if (w0 < -1e-6 || w1 < -1e-6 || w2 < -1e-6) continue;
+      const k = j*cols+i; zin[k] = w0*a[2] + w1*b[2] + w2*c[2]; known[k] = 1;
+    }
+  }
+  for (let k=0;k<N;k++) if (known[k]) r[k] = zin[k] - ze[k];
+  // the difference from the head shape fades out from the face, over about a fifth of the face width
+  const f4 = 1/(4*(1+0.002));
+  for (let it=0; it<500; it++)
+    for (let j=1;j<rows-1;j++) for (let i=1;i<cols-1;i++){
+      const k = j*cols+i; if (!known[k]) r[k] = (r[k-1]+r[k+1]+r[k-cols]+r[k+cols])*f4;
+    }
+  const Zg = new Float32Array(N);
+  for (let k=0;k<N;k++) Zg[k] = known[k] ? zin[k] : Math.max(zc, ze[k] + r[k]);
+  S.mesh = { x0, y0, dx, dy, cols, rows, Z:Zg, zc, A, ex, ey, pivot:[o[0], o[1], (Z(168)+zc)/2], ver:S.meshVer };
+}
+function zAt(x, y){
+  const M = S.mesh; if (!M) return 0;
+  const gx = (x-M.x0)/M.dx, gy = (y-M.y0)/M.dy;
+  if (gx < 0 || gy < 0 || gx > M.cols-1 || gy > M.rows-1) return M.zc;
+  const i = Math.min(M.cols-2, Math.floor(gx)), j = Math.min(M.rows-2, Math.floor(gy)), fx = gx-i, fy = gy-j, k = j*M.cols+i;
+  return (M.Z[k]*(1-fx) + M.Z[k+1]*fx)*(1-fy) + (M.Z[k+M.cols]*(1-fx) + M.Z[k+M.cols+1]*fx)*fy;
+}
+const is3D = () => !!(S.mesh && S.yaw);
+/* A photo point, turned, in the photo's own pixel plane. */
+function turn(p){
+  const M = S.mesh, t = S.yaw*Math.PI/180, c = Math.cos(t), s = Math.sin(t);
+  const dX = p[0]-M.pivot[0], dY = p[1]-M.pivot[1], dz = zAt(p[0], p[1]) - M.pivot[2];
+  const a = dX*M.ex[0] + dY*M.ex[1], b = dX*M.ey[0] + dY*M.ey[1];
+  const a2 = a*c + dz*s;
+  return [M.pivot[0] + M.ex[0]*a2 + M.ey[0]*b, M.pivot[1] + M.ex[1]*a2 + M.ey[1]*b];
+}
+/* Photo point to screen point (CSS pixels), in either view. */
+function toScreen(p){
+  const q = is3D() ? turn(p) : p;
+  return [q[0]*S.view.s + S.view.ox, q[1]*S.view.s + S.view.oy];
+}
+/* Screen point to photo point. In the turned view the renderer is asked
+   which photo point it drew there. */
+function screenToImg(cx, cy){
+  if (!is3D()) return toImg(cx, cy);
+  const d = window.devicePixelRatio || 1;
+  const p = GL.screen && GL.screen.pick(cx*d, cy*d);
+  return p ? [p[0]*S.W, p[1]*S.H] : null;
+}
+
+/* ═══════════ WebGL renderer ═══════════ */
+const VS = `
+attribute vec3 aPos; attribute vec2 aUV;
+uniform vec3 uPiv; uniform vec2 uEx, uEy, uCS, uSize; uniform vec3 uView; uniform float uDepth;
+varying vec2 vUV;
+void main(){
+  vec2 d = aPos.xy - uPiv.xy; float a = dot(d, uEx), b = dot(d, uEy), z = aPos.z - uPiv.z;
+  float a2 = a*uCS.x + z*uCS.y, z2 = -a*uCS.y + z*uCS.x;
+  vec2 p = uPiv.xy + uEx*a2 + uEy*b;
+  vec2 sc = p*uView.x + uView.yz;
+  gl_Position = vec4(sc.x/uSize.x*2.0-1.0, 1.0-sc.y/uSize.y*2.0, -z2/uDepth, 1.0);
+  vUV = aUV;
+}`;
+const FS = `precision highp float; varying vec2 vUV; uniform sampler2D uTex;
+void main(){ gl_FragColor = vec4(texture2D(uTex, vUV).rgb, 1.0); }`;
+const FS_PICK = `precision highp float; varying vec2 vUV;
+void main(){
+  vec2 q = 1.0 + floor(clamp(vUV, 0.0, 1.0)*65533.0 + 0.5);
+  gl_FragColor = vec4(floor(q.x/256.0), mod(q.x, 256.0), floor(q.y/256.0), mod(q.y, 256.0))/255.0;
+}`;
+const GL = { screen:null, export:null };
+function makeGL(canvas){
+  const opt = { antialias:true, depth:true, preserveDrawingBuffer:true, premultipliedAlpha:false };
+  const gl = canvas.getContext('webgl2', opt) || canvas.getContext('webgl', opt);
+  if (!gl) return null;
+  const isGL2 = typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext;
+  const big = isGL2 || gl.getExtension('OES_element_index_uint');
+  const prog = fs => {
+    const p = gl.createProgram();
+    for (const [type, src] of [[gl.VERTEX_SHADER, VS], [gl.FRAGMENT_SHADER, fs]]){
+      const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+      gl.attachShader(p, sh);
+    }
+    gl.bindAttribLocation(p, 0, 'aPos'); gl.bindAttribLocation(p, 1, 'aUV');
+    gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {}; for (const n of ['uPiv','uEx','uEy','uCS','uSize','uView','uDepth','uTex']) u[n] = gl.getUniformLocation(p, n);
+    return { p, u };
+  };
+  let P, PK;
+  try { P = prog(FS); PK = prog(FS_PICK); } catch (e){ console.warn(e); return null; }
+  const vb = gl.createBuffer(), ub = gl.createBuffer(), ib = gl.createBuffer(), tex = gl.createTexture();
+  let nIdx = 0, idxType = gl.UNSIGNED_SHORT, meshVer = -1, fbo = null, fboW = 0, fboH = 0, rb = null, ftex = null;
+  const R = { canvas, maxTex: gl.getParameter(gl.MAX_TEXTURE_SIZE) };
+  R.setMesh = M => {
+    if (M.ver === meshVer) return; meshVer = M.ver;
+    const nv = M.cols*M.rows + 4, pos = new Float32Array(nv*3), uv = new Float32Array(nv*2);
+    for (let j=0;j<M.rows;j++) for (let i=0;i<M.cols;i++){
+      const k = j*M.cols+i, x = M.x0 + i*M.dx, y = M.y0 + j*M.dy;
+      pos[k*3] = x; pos[k*3+1] = y; pos[k*3+2] = M.Z[k]; uv[k*2] = x/S.W; uv[k*2+1] = y/S.H;
+    }
+    // the whole photograph as a flat card just behind the head, for the parts away from the face
+    const b = M.cols*M.rows, zb = M.zc - 0.004*Math.max(S.W, S.H);
+    [[0,0],[S.W,0],[0,S.H],[S.W,S.H]].forEach((c, q) => { pos.set([c[0], c[1], zb], (b+q)*3); uv.set([c[0]/S.W, c[1]/S.H], (b+q)*2); });
+    const idx = [];
+    idx.push(b, b+1, b+2, b+1, b+3, b+2);
+    for (let j=0;j<M.rows-1;j++) for (let i=0;i<M.cols-1;i++){
+      const k = j*M.cols+i; idx.push(k, k+1, k+M.cols, k+1, k+M.cols+1, k+M.cols);
+    }
+    const IA = (nv > 65535 && big) ? Uint32Array : Uint16Array; idxType = IA === Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
+    gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, ub); gl.bufferData(gl.ARRAY_BUFFER, uv, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new IA(idx), gl.STATIC_DRAW);
+    nIdx = idx.length;
+  };
+  R.setTexture = c => {
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    if (isGL2){ gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); }
+    else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  };
+  const pass = (pr, view, w, h) => {
+    const M = S.mesh, t = S.yaw*Math.PI/180;
+    gl.viewport(0, 0, w, h);
+    gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.disable(gl.BLEND);
+    gl.clearColor(0, 0, 0, pr === PK ? 0 : 1); gl.clearDepth(1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(pr.p);
+    gl.uniform3f(pr.u.uPiv, ...M.pivot); gl.uniform2f(pr.u.uEx, ...M.ex); gl.uniform2f(pr.u.uEy, ...M.ey);
+    gl.uniform2f(pr.u.uCS, Math.cos(t), Math.sin(t)); gl.uniform2f(pr.u.uSize, w, h);
+    gl.uniform3f(pr.u.uView, view.s, view.ox, view.oy); gl.uniform1f(pr.u.uDepth, 3*Math.max(S.W, S.H));
+    gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, ub); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+    if (pr === P){ gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(pr.u.uTex, 0); }
+    gl.drawElements(gl.TRIANGLES, nIdx, idxType, 0);
+  };
+  R.draw = (view, w, h) => {
+    if (canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); pass(P, view, w, h);
+  };
+  R.pickView = null;
+  R.pick = (sx, sy) => {
+    const v = R.pickView; if (!v) return null;
+    const w = canvas.width, h = canvas.height;
+    if (!fbo || fboW !== w || fboH !== h){
+      if (fbo){ gl.deleteFramebuffer(fbo); gl.deleteRenderbuffer(rb); gl.deleteTexture(ftex); }
+      fbo = gl.createFramebuffer(); ftex = gl.createTexture(); rb = gl.createRenderbuffer();
+      gl.bindTexture(gl.TEXTURE_2D, ftex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, rb); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, ftex, 0);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
+      fboW = w; fboH = h;
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    pass(PK, v, w, h);
+    const px = new Uint8Array(4);
+    gl.readPixels(Math.round(sx), Math.round(h - 1 - sy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (!px[0] && !px[1] && !px[2] && !px[3]) return null;
+    return [((px[0]*256 + px[1]) - 1)/65533, ((px[2]*256 + px[3]) - 1)/65533];
+  };
+  return R;
+}
+/* The photograph with its guides and points, drawn flat, to lay over the relief.
+   pxT keeps lines and labels the same size as in the flat view. */
+function buildTexture(R, pxT, opts){
+  const lim = Math.min(R.maxTex || 4096, 2560);
+  const tk = Math.min(1, lim/Math.max(S.W, S.H));
+  const c = S.texCanvas || (S.texCanvas = document.createElement('canvas'));
+  c.width = Math.round(S.W*tk); c.height = Math.round(S.H*tk);
+  const tg = c.getContext('2d'); tg.fillStyle = '#000'; tg.fillRect(0, 0, c.width, c.height);
+  drawScene(c.getContext('2d'), { s:tk, ox:0, oy:0 }, clamp(pxT*tk, 0.2, 60), opts || { tex:true });
+  R.setTexture(c);
+}
+let texTimer = 0;
+function draw3D(){
+  if (!GL.screen){ GL.screen = makeGL(document.createElement('canvas')) || false; }
+  const R = GL.screen;
+  if (!R){ S.yaw = 0; $('#yaw').value = 0; $('#turnBox').hidden = true; status('This browser cannot show the turning view.'); return false; }
+  const d = window.devicePixelRatio || 1;
+  R.setMesh(S.mesh);
+  if (S.texDirty || !S.texS){ buildTexture(R, 1/S.view.s); S.texS = S.view.s; S.texDirty = false; }
+  else if (Math.abs(Math.log(S.view.s/S.texS)) > 0.2){
+    // after a zoom, redraw the overlay at the new size once the zoom has settled
+    clearTimeout(texTimer); texTimer = setTimeout(() => { S.texDirty = true; redraw(true); }, 180);
+  }
+  const view = { s:S.view.s*d, ox:S.view.ox*d, oy:S.view.oy*d };
+  R.draw(view, cv.width, cv.height); R.pickView = view;
+  ctx.drawImage(R.canvas, 0, 0);
+  return true;
+}
+/* The turned view for the downloaded image, at its own size. */
+function render3DFor(w, h, k, px){
+  if (!GL.export) GL.export = makeGL(document.createElement('canvas')) || false;
+  const R = GL.export; if (!R) return null;
+  R.setMesh(S.mesh);
+  buildTexture(R, px/k, { export:true });
+  R.draw({ s:k, ox:0, oy:0 }, w, h);
+  S.texDirty = true;
+  return R.canvas;
+}
+function updateTurnUI(){
+  const ok = !!S.mesh;
+  $('#turnBox').hidden = !ok;
+  if (!ok){ S.yaw = 0; $('#yaw').value = 0; }
+  $('#yawOut').textContent = S.yaw ? (S.yaw < 0 ? `◂ ${-S.yaw}°` : `${S.yaw}° ▸`) : '0°';
+}
+$('#yaw').oninput = () => { S.yaw = +$('#yaw').value; updateTurnUI(); redraw(true); };
+$('#yaw0').onclick = () => { S.yaw = 0; $('#yaw').value = 0; updateTurnUI(); redraw(true); };
+
+
+/* ═══════════ pointer: tap, drag, pinch ═══════════ */
+const ptrs = new Map();
+let drag = null, pinch = null;
+function hitMark(cx, cy){
+  for (let i=S.marks.length-1;i>=0;i--){
+    const m = S.marks[i];
+    const [sx, sy] = toScreen([m.x, m.y]);
+    if (Math.hypot(sx-cx, sy-cy) <= 15) return m;
+  }
+  return null;
+}
+function hitKey(cx, cy){
+  if (!S.K) return null;
+  let best = null, bd = 16;
+  for (const [id, p] of Object.entries(S.K)){
+    const q = toScreen(p), d = Math.hypot(q[0] - cx, q[1] - cy);
+    if (d < bd){ bd = d; best = id; }
+  }
+  return best;
+}
+cv.addEventListener('pointerdown', e => {
+  if (!S.img) return;
+  cv.setPointerCapture(e.pointerId);
+  const r = cv.getBoundingClientRect(), cx = e.clientX-r.left, cy = e.clientY-r.top;
+  ptrs.set(e.pointerId, [cx, cy]);
+  if (ptrs.size === 2){
+    const [a, b] = [...ptrs.values()];
+    pinch = { d:Math.hypot(a[0]-b[0], a[1]-b[1]), c:mid(a,b), s:S.view.s, ox:S.view.ox, oy:S.view.oy };
+    drag = null; return;
+  }
+  const m = hitMark(cx, cy);
+  if (S.mode === 'mark'){
+    drag = m ? { kind:'tapmark', m, x0:cx, y0:cy, moved:false } : { kind:'tap', x0:cx, y0:cy, moved:false };
+  } else if (S.mode === 'move'){
+    const k = m ? null : hitKey(cx, cy);
+    if (m){ pushUndo(); drag = { kind:'mark', m }; select(m.id); }
+    else if (k){ pushUndo(); drag = { kind:'key', id:k }; }
+    else drag = { kind:'pan', x0:cx, y0:cy, ox:S.view.ox, oy:S.view.oy };
+  } else if (S.mode === 'ruler'){
+    drag = { kind:'ruler', x0:cx, y0:cy, moved:false };
+  }
+});
+cv.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) return;
+  const r = cv.getBoundingClientRect(), cx = e.clientX-r.left, cy = e.clientY-r.top;
+  ptrs.set(e.pointerId, [cx, cy]);
+  if (pinch && ptrs.size === 2){
+    const [a, b] = [...ptrs.values()];
+    const d = Math.hypot(a[0]-b[0], a[1]-b[1]), c = mid(a,b);
+    const k = d / (pinch.d || 1);
+    const s = Math.min(40, Math.max(0.02, pinch.s*k));
+    const p = [(pinch.c[0]-pinch.ox)/pinch.s, (pinch.c[1]-pinch.oy)/pinch.s];
+    S.view = { s, ox:c[0]-p[0]*s, oy:c[1]-p[1]*s };
+    redraw(true); return;
+  }
+  if (!drag) return;
+  if (drag.x0 !== undefined && Math.hypot(cx-drag.x0, cy-drag.y0) > 6) drag.moved = true;
+  if (drag.kind === 'mark'){ const p = screenToImg(cx, cy); if (p){ drag.m.x = p[0]; drag.m.y = p[1]; renderMarks(); redraw(); } }
+  else if (drag.kind === 'key'){ const p = screenToImg(cx, cy); if (p){ S.K[drag.id] = p; if (drag.id.startsWith('iris')) computeIris(); refreshAll(); } }
+  else if (drag.kind === 'pan'){ S.view.ox = drag.ox + cx - drag.x0; S.view.oy = drag.oy + cy - drag.y0; redraw(true); }
+  else if ((drag.kind === 'tap' || drag.kind === 'tapmark') && drag.moved && S.mode === 'mark'){
+    // a drag in Mark mode pans, so a finger on a tablet can move the photo
+    if (!drag.pan) drag.pan = { ox:S.view.ox, oy:S.view.oy };
+    S.view.ox = drag.pan.ox + cx - drag.x0; S.view.oy = drag.pan.oy + cy - drag.y0; redraw(true);
+  }
+});
+function endPtr(e){
+  if (!ptrs.has(e.pointerId)) return;
+  const r = cv.getBoundingClientRect(), cx = e.clientX-r.left, cy = e.clientY-r.top;
+  ptrs.delete(e.pointerId);
+  if (pinch){ if (ptrs.size < 2) pinch = null; drag = null; return; }
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.kind === 'tap' && !d.moved){
+    const p = screenToImg(cx, cy);
+    if (!p || p[0] < 0 || p[1] < 0 || p[0] > S.W || p[1] > S.H) return;
+    pushUndo();
+    const m = { id:'m'+(S.seq++), x:p[0], y:p[1], proc:S.proc, dose:$('#doseNew').value.trim(), label:'' };
+    S.marks.push(m); select(m.id);
+    const z = zoneHits(p);
+    if (z.length) status(`Point ${S.marks.length} is inside a danger zone: ${z.map(q=>q.name).join(', ')}.`);
+  } else if (d.kind === 'tapmark' && !d.moved){
+    select(d.m.id);
+  } else if (d.kind === 'ruler' && !d.moved){
+    const p = screenToImg(cx, cy); if (!p) return;
+    if (S.ruler.length !== 1) S.ruler = [p];
+    else {
+      S.ruler.push(p); redraw();
+      setTimeout(() => {
+        const px_ = len(sub(S.ruler[1], S.ruler[0]));
+        const v = prompt('Real distance between the two points, in mm:', '30');
+        const mmv = parseFloat(v);
+        if (mmv > 0 && px_ > 2){ S.rulerMmPerPx = mmv/px_; S.scaleSrc = 'ruler'; $('#scaleSrc').value = 'ruler'; refreshAll(); }
+        else S.ruler = [];
+        setMode('mark'); redraw();
+      }, 30);
+    }
+  } else if (d.kind === 'mark' || d.kind === 'key'){
+    if (d.kind === 'key') refreshBackground();
+    refreshAll();
+  }
+  redraw();
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+
+function setMode(m){
+  S.mode = m;
+  for (const [id, mm] of [['#mMark','mark'],['#mMove','move'],['#mRuler','ruler']]) $(id).classList.toggle('on', m===mm);
+  if (m === 'ruler'){ S.ruler = []; status('Ruler: tap one end, then the other.'); }
+  else if (m === 'move') status('Move: drag a point or an orange key-point handle. Drag the background to pan.');
+  else status('');
+  redraw();
+}
+$('#mMark').onclick = () => setMode('mark');
+$('#mMove').onclick = () => setMode('move');
+$('#mRuler').onclick = () => setMode('ruler');
+let stT = 0;
+function status(t){ $('#status').textContent = t; clearTimeout(stT); if (t) stT = setTimeout(()=>{ $('#status').textContent=''; }, 7000); }
+
+/* ═══════════ undo ═══════════ */
+function pushUndo(){
+  S.undo.push(JSON.stringify({ marks:S.marks, K:S.K }));
+  if (S.undo.length > 60) S.undo.shift();
+  $('#bUndo').disabled = false;
+}
+function undo(){
+  const s = S.undo.pop(); if (!s) return;
+  const d = JSON.parse(s); S.marks = d.marks; S.K = d.K; S.sel = null;
+  $('#bUndo').disabled = !S.undo.length;
+  computeIris(); refreshBackground(); refreshAll();
+}
+$('#bUndo').onclick = undo;
+addEventListener('keydown', e => {
+  if (/input|select|textarea/i.test(e.target.tagName)) return;
+  if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); }
+  if ((e.key==='Delete'||e.key==='Backspace') && S.sel){ e.preventDefault(); delSel(); }
+});
+
+/* ═══════════ the panel ═══════════ */
+function renderProcs(){
+  const box = $('#procChips'); box.innerHTML = '';
+  for (const p of PROCS){
+    const c = document.createElement('span');
+    c.className = 'chip' + (S.proc===p.id ? ' on' : '');
+    c.innerHTML = `<span class="dot" style="background:${p.color}"></span>${esc(p.name)}`;
+    c.onclick = () => { S.proc = p.id; $('#doseNew').value = p.dose; renderProcs(); };
+    box.appendChild(c);
+  }
+  $('#eProc').innerHTML = PROCS.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+}
+function renderTemplates(){
+  const sel = $('#tplSel'); let g = '';
+  let html = '<option value="">Add a standard pattern…</option>';
+  for (const a of AREAS){
+    if (a.group !== g){ if (g) html += '</optgroup>'; html += `<optgroup label="${esc(a.group)}">`; g = a.group; }
+    html += `<option value="${a.id}">${esc(a.name)}</option>`;
+  }
+  sel.innerHTML = html + '</optgroup>';
+}
+$('#tplAdd').onclick = () => {
+  const a = AREAS.find(q => q.id === $('#tplSel').value);
+  if (!a || !S.K) return;
+  pushUndo();
+  const F = frame(), K = S.K, k = 1/mmPerPx();
+  const grab = (base, side) => {
+    if (base === 'stomion') return stomion();
+    if (K[base]) return K[base];
+    return K[base + (side < 0 ? 'R' : 'L')];
+  };
+  for (const d of a.pts){
+    for (const side of d.sym ? [-1, 1] : [0]){
+      const A = grab(d.a, side || -1); if (!A) continue;
+      const fa = F.toF(A);
+      const x = fa[0] + (side || 0)*(d.dx||0)*k, y = fa[1] + (d.dy||0)*k;
+      const p = F.fromF(x, y);
+      S.marks.push({ id:'m'+(S.seq++), x:p[0], y:p[1], proc:a.proc, dose:d.units||'', label:(d.label ? d.label+', ' : '') + a.name + (side ? (side<0?' (R)':' (L)') : '') });
+    }
+  }
+  S.sel = null; refreshAll();
+  const n = a.pts.reduce((t,d)=>t+(d.sym?2:1),0);
+  status(`${a.name}: ${n} points added. Switch to Move to adjust them.`);
+};
+function select(id){ S.sel = id; renderMarks(); redraw(); }
+function delSel(){
+  if (!S.sel) return;
+  pushUndo(); S.marks = S.marks.filter(m => m.id !== S.sel); S.sel = null; refreshAll();
+}
+function renderMarks(){
+  const box = $('#marks');
+  if (!S.marks.length){ box.innerHTML = '<p class="note">No points yet. Choose a product, then tap the face.</p>'; }
+  else {
+    box.innerHTML = '';
+    S.marks.forEach((m, i) => {
+      const pr = PROC[m.proc] || PROC.note, z = zoneHits([m.x,m.y]);
+      const d = document.createElement('div'); d.className = 'mk' + (m.id===S.sel ? ' sel' : '');
+      d.innerHTML = `<span class="n" style="background:${pr.color}">${i+1}</span>
+        <span class="t">${esc(pr.name)}${m.label ? `<small>${esc(m.label)}</small>` : ''}${z.length ? `<small class="w">In: ${esc(z.map(q=>q.name).join(', '))}</small>` : ''}</span>
+        <span class="num">${esc(m.dose)}</span>`;
+      d.onclick = () => select(m.id);
+      box.appendChild(d);
+    });
+  }
+  const m = S.marks.find(q => q.id === S.sel);
+  $('#edit').hidden = !m;
+  if (m){ $('#eProc').value = m.proc; $('#eDose').value = m.dose; $('#eLabel').value = m.label; }
+  renderTotals();
+  $('#bClear').disabled = !S.marks.length;
+}
+$('#eProc').onchange = () => { const m = S.marks.find(q=>q.id===S.sel); if (m){ pushUndo(); m.proc = $('#eProc').value; refreshAll(); } };
+$('#eDose').oninput = () => { const m = S.marks.find(q=>q.id===S.sel); if (m){ m.dose = $('#eDose').value; renderTotals(); redraw(); updateRowText(); } };
+$('#eLabel').oninput = () => { const m = S.marks.find(q=>q.id===S.sel); if (m){ m.label = $('#eLabel').value; updateRowText(); } };
+function updateRowText(){ clearTimeout(updateRowText.t); updateRowText.t = setTimeout(()=>{ const a=document.activeElement; renderMarks(); if (a) a.focus(); }, 400); }
+$('#eDel').onclick = delSel;
+$('#eDone').onclick = () => select(null);
+$('#bClear').onclick = () => { if (!S.marks.length) return; if (!confirm('Remove every point on this photo?')) return; pushUndo(); S.marks = []; S.sel = null; refreshAll(); };
+
+function totals(){
+  const t = {};
+  for (const m of S.marks){
+    const pr = PROC[m.proc] || PROC.note;
+    const v = parseFloat(String(m.dose).replace(',', '.'));
+    t[pr.id] = t[pr.id] || { name:pr.name, color:pr.color, n:0, sum:0, unit:pr.unit, any:false };
+    t[pr.id].n++;
+    if (isFinite(v)){ t[pr.id].sum += v; t[pr.id].any = true; }
+  }
+  return Object.values(t);
+}
+const fmtSum = q => !q.any ? '' : (q.unit === 'U' ? `${Math.round(q.sum*10)/10} U` : q.unit === 'mL' ? `${Math.round(q.sum*100)/100} mL` : `${Math.round(q.sum*100)/100}`);
+function renderTotals(){
+  const T = totals();
+  $('#totals').innerHTML = T.length ? T.map(q => `<div><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${q.color};margin-right:6px"></span><b>${esc(q.name)}</b>: ${q.n} point${q.n===1?'':'s'}${q.any ? ', ' + fmtSum(q) : ''}</div>`).join('') : '';
+}
+
+function renderDz(){
+  const box = $('#dzList');
+  if (!S.K || !$('#gDanger').checked){ box.innerHTML = ''; return; }
+  const seen = new Map();
+  for (const z of dangerZones()){
+    if (!seen.has(z.name)) seen.set(z.name, { name:z.name, sev:z.sev, ids:[] });
+    seen.get(z.name).ids.push(z.id);
+  }
+  box.innerHTML = '';
+  for (const z of seen.values()){
+    const on = !z.ids.every(id => S.dzOff.has(id));
+    const l = document.createElement('label'); l.className = 'dz';
+    l.innerHTML = `<input type="checkbox" ${on?'checked':''}><span class="dot" style="background:${SEV[z.sev].c}"></span>${esc(z.name)}<span class="sv">${SEV[z.sev].n}</span>`;
+    l.querySelector('input').onchange = e => { for (const id of z.ids) e.target.checked ? S.dzOff.delete(id) : S.dzOff.add(id); refreshAll(); };
+    box.appendChild(l);
+  }
+}
+for (const id of ['#gMid','#gThirds','#gFifths','#gNums','#gKeys']) $(id).onchange = redraw;
+$('#gDanger').onchange = () => { renderDz(); renderMarks(); redraw(); };
+
+function renderProps(){
+  const box = $('#props');
+  if (!S.K){ box.innerHTML = '<p class="note">Open a photo first.</p>'; return; }
+  const mm = mmPerPx(), th = thirds(), ff = fifths(), tot = th.seg.reduce((a,b)=>a+b,0);
+  const eye = (ff.seg[1]+ff.seg[3])/2;
+  const F = frame();
+  const ic = ff.seg[2], alar = Math.abs(F.toF(S.K.alaL)[0] - F.toF(S.K.alaR)[0]);
+  const mouth = Math.abs(F.toF(S.K.mouthL)[0] - F.toF(S.K.mouthR)[0]);
+  const r = (a,b) => (a/b).toFixed(2);
+  box.innerHTML = `
+    <table>
+      <tr><th>Thirds</th><th class="num">mm</th><th class="num">share</th></tr>
+      ${['Upper (hairline to glabella)','Middle (glabella to subnasale)','Lower (subnasale to menton)'].map((n,i)=>
+        `<tr><td>${n}</td><td class="num">${(th.seg[i]*mm).toFixed(0)}</td><td class="num">${Math.round(100*th.seg[i]/tot)}%</td></tr>`).join('')}
+    </table>
+    <p class="note">Ideal is a third each. The upper third depends on the hairline handle.</p>
+    <table style="margin-top:6px">
+      <tr><th>Fifths, patient's right to left</th><th class="num">mm</th><th class="num">× eye</th></tr>
+      ${['Lateral, right','Eye, right','Between the eyes','Eye, left','Lateral, left'].map((n,i)=>
+        `<tr><td>${n}</td><td class="num">${(ff.seg[i]*mm).toFixed(0)}</td><td class="num">${r(ff.seg[i],eye)}</td></tr>`).join('')}
+    </table>
+    <p class="note">Ideal is one eye width each.</p>
+    <table style="margin-top:6px">
+      <tr><th>Width</th><th class="num">mm</th><th class="num">ratio</th></tr>
+      <tr><td>Alar width ÷ between the eyes</td><td class="num">${(alar*mm).toFixed(0)}</td><td class="num">${r(alar, ic)}</td></tr>
+      <tr><td>Mouth width ÷ alar width</td><td class="num">${(mouth*mm).toFixed(0)}</td><td class="num">${r(mouth, alar)}</td></tr>
+    </table>
+    <p class="note">Classic references: alar width close to the distance between the eyes (1.0), mouth about 1.5 alar widths.</p>`;
+}
+function renderScale(){
+  if (!S.K){ $('#scaleInfo').textContent = 'Open a photo first.'; return; }
+  const mm = mmPerPx(), F = frame();
+  $('#scaleInfo').innerHTML = `Using <b>${scaleName()}</b>: outer eye corners ${(F.u*mm).toFixed(0)} mm apart.` +
+    (S.scaleSrc==='iris' && !S.iris ? ' Iris not found on this photo, so 90 mm is assumed.' : '') +
+    (S.scaleSrc==='ruler' && !S.rulerMmPerPx ? ' No ruler yet, so 90 mm is assumed.' : '');
+}
+$('#scaleSrc').onchange = () => { S.scaleSrc = $('#scaleSrc').value; if (S.scaleSrc==='ruler' && !S.rulerMmPerPx) setMode('ruler'); refreshAll(); };
+
+function refreshAll(){ renderMarks(); renderDz(); renderProps(); renderScale(); renderBg(); redraw(); }
+
+/* ═══════════ detection ═══════════ */
+let landmarker = null;
+async function getLandmarker(){
+  if (landmarker) return landmarker;
+  const v = await vision(), fs = await files();
+  const opts = { baseOptions:{ modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate:'GPU' },
+                 runningMode:'IMAGE', numFaces:1, minFaceDetectionConfidence:0.3, minFacePresenceConfidence:0.3 };
+  try { landmarker = await v.FaceLandmarker.createFromOptions(fs, opts); }
+  catch { opts.baseOptions.delegate = 'CPU'; landmarker = await v.FaceLandmarker.createFromOptions(fs, opts); }
+  return landmarker;
+}
+function computeIris(){
+  S.iris = null;
+  const K = S.K; if (!K) return;
+  const ds = [];
+  for (const s of ['R','L']){
+    const a = K['irisA'+s], b = K['irisB'+s];
+    if (a && b){ const d = len(sub(a,b)); if (d > 3) ds.push(d); }
+  }
+  if (!ds.length) return;
+  const px_ = ds.reduce((t,v)=>t+v,0)/ds.length;
+  // a sanity check: an iris is about an eighth of the outer canthal span
+  const r = px_ / frame().u;
+  if (r > 0.08 && r < 0.2) S.iris = IRIS_MM / px_;
+}
+async function detect(){
+  status('Finding the face…');
+  S.L = null; S.segConf = null; S.hairFromSeg = false; S.mesh = null; S.yaw = 0; updateTurnUI();
+  try {
+    const lmk = await getLandmarker();
+    const res = lmk.detect(S.img);
+    const L = res.faceLandmarks && res.faceLandmarks[0];
+    if (!L){ placeTemplate(); status('No face found, so a standard face has been placed. Drag each orange handle onto its anatomy.'); return; }
+    const P = i => [L[i].x*S.W, L[i].y*S.H];
+    const K = {};
+    for (const k of KEYS) K[k.id] = P(k.mp);
+    if (L.length >= 478){
+      // horizontal iris diameter: landmarks 469/471 on one eye, 474/476 on the other
+      K.irisAR = P(469); K.irisBR = P(471); K.irisAL = P(474); K.irisBL = P(476);
+    }
+    S.K = K; S.detected = true;
+    // depth toward the camera, in photo pixels (MediaPipe gives z on the scale of x)
+    S.L = L.map(q => [q.x*S.W, q.y*S.H, -(q.z || 0)*S.W]);
+    K.hairline = estimateHairline(L);
+    computeIris();
+  } catch (e){
+    console.error(e);
+    placeTemplate();
+    status('The face finder could not load (it needs internet the first time). A standard face has been placed: drag each orange handle onto its anatomy.');
+    return;
+  }
+  afterKeys();
+  status('Face found. Removing the background…');
+  await segment();
+  try { refreshBackground(); buildMesh(); } catch (e){ console.warn(e); S.mesh = null; }
+  updateTurnUI(); refreshAll(); fit();     // the toolbar may have grown a line
+  status('Face found. Choose a product and tap the face to place points.');
+}
+/* There is no landmark on the hairline. The upper forehead landmark (10)
+   sits well below it, so start a little above it and let the clinician drag
+   it to the real hairline. */
+function estimateHairline(L){
+  const F = frame(); const f10 = F.toF([L[10].x*S.W, L[10].y*S.H]), fg = F.toF(S.K.glabella);
+  return F.fromF(f10[0], fg[1] - (fg[1]-f10[1])*1.35);
+}
+function placeTemplate(){
+  // centre a standard face on the photograph, a third of its width across the outer eye corners
+  const u = Math.min(S.W, S.H)*0.3, o = [S.W/2, S.H*0.42];
+  const K = {};
+  for (const [id, p] of Object.entries(TEMPLATE)) K[id] = [o[0]+p[0]*u, o[1]+p[1]*u];
+  S.K = K; S.detected = false; S.iris = null;
+  S.L = null; S.hairFromSeg = false; refreshBackground(); buildMesh(); updateTurnUI();
+  afterKeys();
+  setMode('move'); $('#gKeys').checked = true;
+}
+function afterKeys(){
+  $('#bRedetect').disabled = $('#bManual').disabled = !S.img;
+  refreshAll(); fit();
+}
+$('#bRedetect').onclick = () => { if (S.img){ pushUndo(); detect(); } };
+$('#bManual').onclick = () => { if (S.img){ pushUndo(); placeTemplate(); status('Drag each orange handle onto its anatomy. Turn Key points on to see them while marking.'); } };
+
+/* ═══════════ files ═══════════ */
+$('#bOpen').onclick = $('#bOpen2').onclick = () => $('#fPhoto').click();
+$('#fPhoto').onchange = e => { const f = e.target.files[0]; if (f) openPhoto(f); e.target.value = ''; };
+function openPhoto(file){
+  const r = new FileReader();
+  r.onload = () => loadImage(r.result, file.name, null);
+  r.readAsDataURL(file);
+}
+function loadImage(dataUrl, name, plan){
+  const img = new Image();
+  img.onload = async () => {
+    S.img = img; S.W = img.naturalWidth; S.H = img.naturalHeight; S.dataUrl = dataUrl; S.imgName = name || '';
+    $('#empty').hidden = true; $('#toolbar').hidden = $('#zoombar').hidden = false;
+    for (const b of ['#bExport','#bPrint','#bSave']) $(b).disabled = false;
+    S.undo = []; $('#bUndo').disabled = true; S.ruler = [];
+    S.L = null; S.segConf = null; S.masks = null; S.cut = null; S.mesh = null; S.yaw = 0; $('#yaw').value = 0; S.hairFromSeg = false;
+    if (plan){
+      S.K = plan.K; S.marks = plan.marks || []; S.seq = plan.seq || (S.marks.length+1);
+      S.scaleSrc = plan.scaleSrc || 'iris'; S.rulerMmPerPx = plan.rulerMmPerPx || null; S.dzOff = new Set(plan.dzOff || []);
+      $('#scaleSrc').value = S.scaleSrc; computeIris(); S.sel = null;
+      S.L = plan.L || null; S.bg = plan.bg || 'face'; $('#bgSel').value = S.bg;
+      if (plan.seg) try { S.segConf = await segFromPlan(plan.seg); } catch (e){ console.warn(e); }
+      refreshBackground(); buildMesh();
+      S.yaw = S.mesh ? (plan.yaw || 0) : 0; $('#yaw').value = S.yaw; updateTurnUI();
+      afterKeys(); status('Plan opened.');
+    } else {
+      S.marks = []; S.sel = null; S.K = null; S.rulerMmPerPx = null; S.dzOff = new Set();
+      fit(); detect();
+    }
+  };
+  img.src = dataUrl;
+}
+// a photograph dropped on the page opens too
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (!f) return;
+  if (/json/.test(f.type) || f.name.endsWith('.json')) openPlanFile(f); else if (/image/.test(f.type)) openPhoto(f); });
+
+const stamp = () => {
+  const n = ($('#pName').value || 'patient').trim().replace(/[^\w\- ]+/g,'').replace(/\s+/g,'-') || 'patient';
+  return `${n}_${$('#pDate').value || new Date().toISOString().slice(0,10)}`;
+};
+function download(url, name){
+  const a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+/* The downloaded image: the marked photograph on the left, the plan beside
+   it, so it can go straight into the notes or be shown to the patient. */
+function composite(){
+  const maxH = 2200;
+  const k = Math.min(1, maxH / S.H);
+  const iw = Math.round(S.W*k), ih = Math.round(S.H*k);
+  const px = Math.max(1, ih/900);
+  const panelW = Math.round(430*px);
+  const c = document.createElement('canvas'); c.width = iw + panelW; c.height = ih;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0,0,c.width,c.height);
+  const turned = is3D() && render3DFor(iw, ih, k, px);
+  if (turned){ g.fillStyle = '#000'; g.fillRect(0, 0, iw, ih); g.drawImage(turned, 0, 0, iw, ih); }
+  else drawScene(g, { s:k, ox:0, oy:0 }, px, { export:true });
+  // the panel
+  let y = 26*px; const x0 = iw + 22*px, wrapW = panelW - 40*px;
+  const text = (t, size, weight, col, gap) => {
+    g.font = `${weight||400} ${size*px}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`; g.fillStyle = col || '#16181d';
+    g.textBaseline = 'top';
+    const words = String(t).split(' '); let line = '';
+    for (const w of words){
+      const tryL = line ? line+' '+w : w;
+      if (g.measureText(tryL).width > wrapW && line){ g.fillText(line, x0, y); y += size*px*1.3; line = w; }
+      else line = tryL;
+    }
+    if (line){ g.fillText(line, x0, y); y += size*px*1.3; }
+    y += (gap||0)*px;
+  };
+  text('Treatment plan', 20, 700, '#16181d', 2);
+  text([$('#pName').value, $('#pDate').value].filter(Boolean).join(' · ') || 'No name', 13, 400, '#454b57', 10);
+  S.marks.forEach((m, i) => {
+    const pr = PROC[m.proc] || PROC.note;
+    if (y > ih - 160*px){ if (!composite.cut){ text(`… and ${S.marks.length - i} more`, 12, 400, '#6f7683', 0); composite.cut = true; } return; }
+    g.fillStyle = pr.color; g.beginPath(); g.arc(x0 + 9*px, y + 8*px, 9*px, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#0b0d10'; g.font = `700 ${9*px}px Arial`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(String(i+1), x0 + 9*px, y + 8.5*px); g.textAlign = 'left';
+    const save = y;
+    const xx = x0;
+    g.font = `600 ${12.5*px}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`; g.fillStyle = '#16181d'; g.textBaseline = 'top';
+    g.fillText(`${pr.name}${m.dose ? '  ' + m.dose : ''}`, xx + 26*px, save);
+    y = save + 16*px;
+    if (m.label){ g.font = `400 ${11*px}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`; g.fillStyle = '#6f7683'; g.fillText(m.label.slice(0, 60), xx + 26*px, y); y += 14*px; }
+    if (zoneHits([m.x,m.y]).length){ g.font = `600 ${11*px}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`; g.fillStyle = '#c03030'; g.fillText('In a danger zone', xx + 26*px, y); y += 14*px; }
+    y += 5*px;
+  });
+  composite.cut = false;
+  y += 6*px;
+  const T = totals();
+  if (T.length){
+    text('Totals', 14, 700, '#16181d', 2);
+    for (const q of T) text(`${q.name}: ${q.n} point${q.n===1?'':'s'}${q.any ? ', ' + fmtSum(q) : ''}`, 12.5, 400, '#16181d', 0);
+    y += 8*px;
+  }
+  if (S.K){
+    const mm = mmPerPx(), th = thirds(), ff = fifths(), tot = th.seg.reduce((a,b)=>a+b,0);
+    text('Proportions', 14, 700, '#16181d', 2);
+    text(`Thirds: ${th.seg.map(v=>Math.round(100*v/tot)+'%').join(' / ')}`, 12, 400, '#16181d', 0);
+    text(`Fifths (mm): ${ff.seg.map(v=>Math.round(v*mm)).join(' / ')}`, 12, 400, '#16181d', 6);
+  }
+  if ($('#gDanger').checked){
+    text('Danger zones', 14, 700, '#16181d', 2);
+    for (const s of [3,2,1]){
+      g.fillStyle = SEV[s].c; g.globalAlpha = 0.6; g.fillRect(x0, y + 2*px, 12*px, 12*px); g.globalAlpha = 1;
+      const names = [...new Set(dangerZones().filter(z=>z.sev===s && !S.dzOff.has(z.id)).map(z=>z.name))];
+      const save = x0; g.font = `400 ${12*px}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`; g.fillStyle = '#16181d'; g.textBaseline='top';
+      g.fillText(`${SEV[s].n}`, save + 18*px, y); y += 15*px;
+      text(names.join(', ') || 'none shown', 11, 400, '#6f7683', 4);
+    }
+  }
+  if (turned) text(`View turned ${Math.abs(S.yaw)}° to the ${S.yaw > 0 ? 'right' : 'left'} of the picture. Depth estimated from one front photo.`, 11, 400, '#454b57', 4);
+  y = Math.max(y, ih - 60*px);
+  text('Approximate reference for planning and discussion. Not a substitute for anatomy, palpation or imaging.', 10.5, 400, '#6f7683', 0);
+  text(`Scale: ${scaleName()}. Face Planner Lite.`, 10.5, 400, '#6f7683', 0);
+  return c;
+}
+$('#bExport').onclick = () => {
+  if (!S.img) return;
+  const c = composite();
+  c.toBlob(b => { const u = URL.createObjectURL(b); download(u, `plan_${stamp()}.png`); setTimeout(()=>URL.revokeObjectURL(u), 4000); }, 'image/png');
+};
+$('#bPrint').onclick = () => {
+  if (!S.img) return;
+  $('#printImg').src = composite().toDataURL('image/jpeg', 0.92);
+  setTimeout(() => window.print(), 250);
+};
+$('#bSave').onclick = () => {
+  if (!S.img) return;
+  // the photograph goes in the plan, reduced to 1800 px on the long side, so the plan opens anywhere
+  const k = Math.min(1, 1800/Math.max(S.W, S.H));
+  const c = document.createElement('canvas'); c.width = Math.round(S.W*k); c.height = Math.round(S.H*k);
+  c.getContext('2d').drawImage(S.img, 0, 0, c.width, c.height);
+  const scaleK = (p) => [p[0]*k, p[1]*k];
+  const K = Object.fromEntries(Object.entries(S.K || {}).map(([id,p]) => [id, scaleK(p)]));
+  const plan = { app:'face-planner-lite', version:1, saved:new Date().toISOString(),
+    patient:$('#pName').value, date:$('#pDate').value, image:c.toDataURL('image/jpeg', 0.9), imageName:S.imgName,
+    K, marks:S.marks.map(m => ({ ...m, x:m.x*k, y:m.y*k })), seq:S.seq,
+    L:S.L ? S.L.map(q => [q[0]*k, q[1]*k, q[2]*k]) : null, seg:segToPlan(k), bg:S.bg, yaw:S.yaw,
+    scaleSrc:S.scaleSrc, rulerMmPerPx:S.rulerMmPerPx ? S.rulerMmPerPx/k : null, dzOff:[...S.dzOff] };
+  const u = URL.createObjectURL(new Blob([JSON.stringify(plan)], { type:'application/json' }));
+  download(u, `plan_${stamp()}.json`); setTimeout(()=>URL.revokeObjectURL(u), 4000);
+};
+/* The model's masks go in the plan as two small PNGs, so a reopened plan has
+   its background removed without the internet. */
+function segToPlan(k){
+  const sc = S.segConf; if (!sc) return null;
+  const png = arr => {
+    const c = maskCanvas(sc.w, sc.h), g = c.getContext('2d'), im = g.createImageData(sc.w, sc.h);
+    for (let i=0;i<sc.w*sc.h;i++){ im.data[i*4] = im.data[i*4+1] = im.data[i*4+2] = 255; im.data[i*4+3] = Math.round(arr[i]*255); }
+    g.putImageData(im, 0, 0); return c.toDataURL('image/png');
+  };
+  return { rect:sc.rect.map(v => v*k), w:sc.w, h:sc.h, face:png(sc.face), head:png(sc.head) };
+}
+async function segFromPlan(p){
+  const read = url => new Promise((ok, bad) => {
+    const im = new Image();
+    im.onload = () => {
+      const c = maskCanvas(p.w, p.h), g = c.getContext('2d'); g.drawImage(im, 0, 0, p.w, p.h);
+      const d = g.getImageData(0, 0, p.w, p.h).data, a = new Float32Array(p.w*p.h);
+      for (let i=0;i<a.length;i++) a[i] = d[i*4+3]/255;
+      ok(a);
+    };
+    im.onerror = bad; im.src = url;
+  });
+  return { rect:p.rect, w:p.w, h:p.h, face:await read(p.face), head:await read(p.head) };
+}
+$('#bLoad').onclick = () => $('#fPlan').click();
+$('#fPlan').onchange = e => { const f = e.target.files[0]; if (f) openPlanFile(f); e.target.value = ''; };
+function openPlanFile(f){
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const p = JSON.parse(r.result);
+      if (p.app !== 'face-planner-lite' || !p.image) throw new Error('not a Face Planner Lite plan');
+      $('#pName').value = p.patient || ''; if (p.date) $('#pDate').value = p.date;
+      loadImage(p.image, p.imageName, p);
+    } catch (e){ alert('Could not open that plan: ' + e.message); }
+  };
+  r.readAsText(f);
+}
+
+renderProcs(); $('#doseNew').value = PROC[S.proc].dose; renderTemplates(); renderMarks();
+window.FPL = { S, dangerZones, thirds, fifths, mmPerPx, composite, frame, toScreen, screenToImg, zAt, turn, is3D, refreshBackground };
+renderBg();
+</script>
+</body>
+</html>
